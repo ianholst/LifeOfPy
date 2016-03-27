@@ -10,9 +10,8 @@ class Creature:
 		self.pos = pos
 		self.vel = vel
 
-	def takeStep(self, dt):
-		# Randomly move in a direction
-		self.vel += self.netForce * dt
+	def move(self, dt):
 		self.pos += self.vel * dt
+		# Random motion (too jittery)
 		#self.pos += Vector(10*random.uniform(-1,1), 10*random.uniform(-1,1))
 

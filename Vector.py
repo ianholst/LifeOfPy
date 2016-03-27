@@ -21,7 +21,7 @@ class Vector(object):
 			raise TypeError("Can only subtract vectors with vectors")
 
 	def __mul__(self, other):
-		if type(other) == int or type(other) == float:
+		if type(other) in [int, float, bool]:
 			return Vector(self.x * other, self.y * other)
 		else:
 			raise TypeError("Can only multiply vectors with scalars")
@@ -30,7 +30,7 @@ class Vector(object):
 		return self.__truediv__(other)
 
 	def __truediv__(self, other):
-		if type(other) == int or type(other) == float:
+		if type(other) in [int, float]:
 			return Vector(self.x / other, self.y / other)
 		else:
 			raise TypeError("Can only divide vectors by scalars")
