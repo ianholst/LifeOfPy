@@ -1,5 +1,5 @@
 import random
-from Vector import Vector, mag, unit
+from Vector import *
 
 class Creature:
 

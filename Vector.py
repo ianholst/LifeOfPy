@@ -1,6 +1,8 @@
 # 2D vector class with basic operations
 # Offers dot product, unit vector, magnitude
 
+from __future__ import division
+
 class Vector(object):
 
 	def __init__(self, x, y):
@@ -36,7 +38,7 @@ class Vector(object):
 			raise TypeError("Can only divide vectors by scalars")
 
 	def __radd__(self, other):
-		return other.__add__(self)
+		return self.__add__(other)
 
 	def __rsub__(self, other):
 		return other.__sub__(self)
