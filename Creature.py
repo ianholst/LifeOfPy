@@ -1,7 +1,7 @@
 import random
 from Vector import *
 
-class Creature:
+class Creature(object):
 
 	def __init__(self, age, energy, size, pos, vel=Vector(0,0,0)):
 		self.age = age

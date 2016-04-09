@@ -1,11 +1,12 @@
-import pyglet
-from pyglet.gl import *
-from pyglet.window import key, mouse
 from Vector import *
 from Creature import *
 from Herd import *
 
-class Environment:
+# ================ TODO ================
+# * More complex behavior as described in the notes
+
+
+class Environment(object):
 # Should handle all interactions between creatures, herds, and environmental objects
 # Assuming almost no user interaction?
 
@@ -25,3 +26,7 @@ class Environment:
 	def update(self, dt):
 		for herd in self.herds:
 			herd.flock(dt)
+
+
+class Tree(object):
+	pass

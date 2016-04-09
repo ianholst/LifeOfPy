@@ -2,7 +2,7 @@ import random
 from Vector import *
 from Creature import *
 
-class Herd:
+class Herd(object):
 # Manages groups of creatures
 # Like BOIDS
 # TODO: make some things class attributes
@@ -13,19 +13,19 @@ class Herd:
 		# Eventually these will be specified for each creature
 
 		self.centerSeekingFactor = 1/100
-		self.centerSeekingOn = 1
+		self.centerSeekingOn = True
 
-		self.herdingSeparation = 30
-		self.herdingSeparationFactor = 2
-		self.herdingSeparationOn = 1
+		self.herdingSeparation = 40
+		self.herdingSeparationFactor = 1
+		self.herdingSeparationOn = True
 
 		self.velocityMatchingFactor = 1/100
-		self.velocityMatchingOn = 1
+		self.velocityMatchingOn = True
 
 		self.moveTowardsFactor = 1/100
 		self.moveTowardsPos = Vector(100,100,0)
 
-		self.velocityLimit = 25
+		self.velocityLimit = 50
 		self.boundaryCorrectionSpeed = 10
 
 		self.center = Vector(0,0,0)
@@ -39,12 +39,18 @@ class Herd:
 		self.center = self.getCenter()
 		self.averageVelocity = self.getAverageVelocity()
 		for creature in self.creatures:
-			v1 = self.seekCenter(creature) * self.centerSeekingOn
-			v2 = self.herdSeparation(creature) * self.herdingSeparationOn
-			v3 = self.matchVelocity(creature) * self.velocityMatchingOn
-			v4 = Vector(0,0,0)#self.moveTowards(creature, self.moveTowardsPos)
+			if self.centerSeekingOn:
+				v1 = self.seekCenter(creature)
+			else: v1 = Vector(0,0,0)
+			if self.herdingSeparationOn:
+				v2 = self.herdSeparation(creature)
+			else: v2 = Vector(0,0,0)
+			if self.velocityMatchingOn:
+				v3 = self.matchVelocity(creature)
+			else: v3 = Vector(0,0,0)
+			#v4 = self.moveTowards(creature, self.moveTowardsPos)
 			#self.boundPosition(creature)
-			creature.vel += (v1 + v2 + v3 + v4)
+			creature.vel += (v1 + v2 + v3)# + v4)
 			#creature.vel += Vector(100*random.uniform(-1,1), 100*random.uniform(-1,1))*dt
 			self.limitVelocity(creature)
 			creature.move(dt)
