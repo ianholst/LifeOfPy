@@ -23,13 +23,13 @@ class Herd:
 		self.velocityMatchingOn = 1
 
 		self.moveTowardsFactor = 1/100
-		self.moveTowardsPos = Vector(100,100)
+		self.moveTowardsPos = Vector(100,100,0)
 
 		self.velocityLimit = 25
 		self.boundaryCorrectionSpeed = 10
 
-		self.center = Vector(0,0)
-		self.averageVelocity = Vector(0,0)
+		self.center = Vector(0,0,0)
+		self.averageVelocity = Vector(0,0,0)
 
 
 	def add(self, creature):
@@ -42,10 +42,10 @@ class Herd:
 			v1 = self.seekCenter(creature) * self.centerSeekingOn
 			v2 = self.herdSeparation(creature) * self.herdingSeparationOn
 			v3 = self.matchVelocity(creature) * self.velocityMatchingOn
-			v4 = Vector(0,0)#self.moveTowards(creature, self.moveTowardsPos)
+			v4 = Vector(0,0,0)#self.moveTowards(creature, self.moveTowardsPos)
 			#self.boundPosition(creature)
 			creature.vel += (v1 + v2 + v3 + v4)
-			creature.vel += Vector(100*random.uniform(-1,1), 100*random.uniform(-1,1))*dt
+			#creature.vel += Vector(100*random.uniform(-1,1), 100*random.uniform(-1,1))*dt
 			self.limitVelocity(creature)
 			creature.move(dt)
 
@@ -57,7 +57,7 @@ class Herd:
 	def herdSeparation(self, creature):
 		# Prevent collisions with other creatures.
 		# TODO: Main source of inefficiency, fix this
-		vs = Vector(0,0)
+		vs = Vector(0,0,0)
 		for otherCreature in self.creatures:
 			if otherCreature != creature:
 				if mag(creature.pos - otherCreature.pos) < self.herdingSeparation:
@@ -77,7 +77,7 @@ class Herd:
 
 	def boundPosition(self, creature, xmin, xmax, ymin, ymax):
 		# TODO: figure out how to do this in a dynamic environment
-		v = Vector(0,0)
+		v = Vector(0,0,0)
 		if creature.pos.x < xmin:
 			v.x = self.boundaryCorrectionSpeed
 		elif creature.pos.x > xmax:
@@ -92,7 +92,7 @@ class Herd:
 
 	def getCenter(self):
 		# TODO: make this faster
-		center = Vector(0,0)
+		center = Vector(0,0,0)
 		for creature in self.creatures:
 			center += creature.pos
 		center /= len(self.creatures)
@@ -100,7 +100,7 @@ class Herd:
 
 	def getAverageVelocity(self):
 		# TODO: make this faster
-		averageVelocity = Vector(0,0)
+		averageVelocity = Vector(0,0,0)
 		for creature in self.creatures:
 			averageVelocity += creature.vel
 		averageVelocity /= len(self.creatures)

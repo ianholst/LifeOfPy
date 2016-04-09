@@ -1,30 +1,32 @@
-# 2D vector class with basic operations
-# Offers dot product, unit vector, magnitude
+# 3D vector class with basic operations
+# Offers dot product, cross product, 
+# Uses real division (import from future in Python 2)
 
 from __future__ import division
 
 class Vector(object):
 
-	def __init__(self, x, y):
+	def __init__(self, x, y, z):
 		self.x = x
 		self.y = y
+		self.z = z
 
 	# Arithmetic operations
 	def __add__(self, other):
 		if type(other) == Vector:
-			return Vector(self.x + other.x, self.y + other.y)
+			return Vector(self.x + other.x, self.y + other.y, self.z + other.z)
 		else:
 			raise TypeError("Can only add vectors to vectors")
 
 	def __sub__(self, other):
 		if type(other) == Vector:
-			return Vector(self.x - other.x, self.y - other.y)
+			return Vector(self.x - other.x, self.y - other.y, self.z - other.z)
 		else:
 			raise TypeError("Can only subtract vectors with vectors")
 
 	def __mul__(self, other):
-		if type(other) in [int, float, bool]:
-			return Vector(self.x * other, self.y * other)
+		if type(other) == int or type(other) == float:
+			return Vector(self.x * other, self.y * other, self.z * other)
 		else:
 			raise TypeError("Can only multiply vectors with scalars")
 
@@ -32,8 +34,8 @@ class Vector(object):
 		return self.__truediv__(other)
 
 	def __truediv__(self, other):
-		if type(other) in [int, float]:
-			return Vector(self.x / other, self.y / other)
+		if type(other) == int or type(other) == float:
+			return Vector(self.x / other, self.y / other, self.z / other)
 		else:
 			raise TypeError("Can only divide vectors by scalars")
 
@@ -53,25 +55,37 @@ class Vector(object):
 		raise TypeError("Cannot divide by a vector")
 
 	def __pos__(self): return self
-	def __neg__(self): return Vector(-self.x, -self.y)
+	def __neg__(self): return Vector(-self.x, -self.y, -self.z)
 
 	# Output when printed
 	def __repr__(self):
-		return "<" + str(self.x) + ", " + str(self.y) + ">"
+		return "<" + str(self.x) + ", " + str(self.y) + ", " + str(self.z) + ">"
+
+	def __iter__(self):
+		return iter([self.x, self.y, self.z])
 
 	# Vector operations
 	def dot(self, other):
-		return (self.x * other.x + self.y * other.y)
+		return (self.x * other.x + self.y * other.y + self.z * other.z)
+
+	def cross(self, other):
+		x = self.y * other.z - self.z * other.y
+		y = self.z * other.x - self.x * other.z
+		z = self.x * other.y - self.y * other.x
+		return Vector(x, y, z)
 
 	def mag(self):
-		return (self.x**2 + self.y**2) ** (1/2)
+		return (self.x**2 + self.y**2 + self.z**2) ** (1/2)
 
 	def unit(self):
-		return self / self.mag()
+		return Vector(self.x / self.mag(), self.y / self.mag(), self.z / self.mag())
 
 
 def dot(v1, v2):
 	return v1.dot(v2)
+
+def cross(v1, v2):
+	return v1.cross(v2)
 
 def unit(v):
 	return v.unit()

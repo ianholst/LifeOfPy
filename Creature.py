@@ -3,7 +3,7 @@ from Vector import *
 
 class Creature:
 
-	def __init__(self, age, energy, size, pos, vel=Vector(0,0)):
+	def __init__(self, age, energy, size, pos, vel=Vector(0,0,0)):
 		self.age = age
 		self.energy = energy
 		self.size = size
