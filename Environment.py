@@ -15,6 +15,9 @@ class Environment(object):
 		self.selectedCreature = None
 		# Random environment elements
 
+	def generateRandomEnvironment(self):
+		pass
+
 	def createHerd(self, N):
 		herd = Herd()
 		for n in range(N):

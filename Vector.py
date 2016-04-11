@@ -74,12 +74,6 @@ class Vector(object):
 		z = self.x * other.y - self.y * other.x
 		return Vector(x, y, z)
 
-	def mag(self):
-		return (self.x**2 + self.y**2 + self.z**2) ** (1/2)
-
-	def unit(self):
-		return Vector(self.x / self.mag(), self.y / self.mag(), self.z / self.mag())
-
 
 def dot(v1, v2):
 	return v1.dot(v2)
@@ -88,7 +82,7 @@ def cross(v1, v2):
 	return v1.cross(v2)
 
 def unit(v):
-	return v.unit()
+	return Vector(v.x / mag(v), v.y / mag(v), v.z / mag(v))
 
 def mag(v):
-	return v.mag()
+	return (v.x**2 + v.y**2 + v.z**2) ** (1/2)

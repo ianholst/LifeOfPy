@@ -14,6 +14,8 @@ import math
 # * 3D shading
 # * Resizing the window in 2D mode
 # * Implement batched rendering for creatures
+# * Make left click select and right click pan
+# * Add labels
 
 
 class Window(pyglet.window.Window):
@@ -29,12 +31,25 @@ class Window(pyglet.window.Window):
 
 		# Mode
 		self.mode = "2D"
+		self.paused = False
 
 		# GUI
-		self.GUI = [Group(x=0, y=0, width=self.width, height=120, color=(0,0,0,0.5)),
-					Button(x=10, y=10, width=100, height=100, text="3D", f=self.switchMode),
-					Button(x=120, y=10, width=100, height=100, text="Herd", f=lambda: self.environment.createHerd(20)),
-					]
+		pyglet.resource.path = ["resources"]
+		pyglet.resource.reindex()
+		self.loadIcons()
+
+		self.bottomPanel = BottomPanel(width=self.width, height=100)
+		
+		self.playPauseButton = Button(self.bottomPanel, anchor="left", icon=self.pauseIcon, f=self.playPause)
+		Button(self.bottomPanel, anchor="left", icon=self.slowerIcon, f=self.slower)
+		Button(self.bottomPanel, anchor="left", icon=self.fasterIcon, f=self.faster)
+
+		Button(self.bottomPanel, anchor="center", text="Herd", icon=self.noIcon, f=lambda:self.environment.createHerd(20))
+
+		Button(self.bottomPanel, anchor="right", text="3D", icon=self.noIcon, f=self.switchMode)
+		Button(self.bottomPanel, anchor="right", text="woo", icon=self.noIcon, f=self.change)
+
+		self.bottomPanel.layoutPanel()
 
 		# Viewport positioning in world coordinates
 		self.viewLeft = 0
@@ -68,10 +83,10 @@ class Window(pyglet.window.Window):
 		# OpenGL setup
 		glClearColor(0, 0, 0, 0)
 		glEnable(GL_BLEND) # enable alpha channel
-		glEnable(GL_LINE_SMOOTH)
-		glEnable(GL_POLYGON_SMOOTH)
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-		glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+		#glEnable(GL_LINE_SMOOTH)
+		#glEnable(GL_POLYGON_SMOOTH)
+		#glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+		#glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
 		glShadeModel(GL_FLAT)
 		#glEnable(GL_CULL_FACE)
 		#glEnable(GL_LIGHTING)
@@ -94,9 +109,11 @@ class Window(pyglet.window.Window):
 
 		self.creatureBatch = pyglet.graphics.Batch()
 
+
 		# Runtime things
 		#self.set_exclusive_mouse(False)
 		self.FPS = pyglet.clock.ClockDisplay(color=(0.5, 0.5, 0.5, 0.5))
+		self.FPS.label.y = self.height-50
 		self.timeFactor = 1
 		pyglet.clock.schedule(self.update)
 		pyglet.app.run()
@@ -109,21 +126,33 @@ class Window(pyglet.window.Window):
 		glFogf(GL_FOG_START, 500)
 		glFogf(GL_FOG_END, 1000)
 
+	def loadIcons(self):
+		self.playIcon = pyglet.resource.image("play.png")
+		self.pauseIcon = pyglet.resource.image("pause.png")
+		self.slowerIcon = pyglet.resource.image("slower.png")
+		self.fasterIcon = pyglet.resource.image("faster.png")
+		self.noIcon = pyglet.resource.image("none.png")
+		for icon in [self.playIcon,self.pauseIcon,self.slowerIcon,self.fasterIcon,self.noIcon]:
+			icon.anchor_x = icon.width/2
+			icon.anchor_y = icon.height/2
+
 
 	def update(self, dt):
-		self.environment.update(self.timeFactor*dt)
+		if not self.paused:
+			self.environment.update(self.timeFactor*dt)
 		if self.mode == "3D":
 			self.playerVelocity.x = self.playerSpeed * math.cos(math.radians(self.playerLook[0]) + math.atan2(self.move.y, self.move.x)) * bool(self.move.x or self.move.y)
 			self.playerVelocity.y = self.playerSpeed * math.sin(math.radians(self.playerLook[0]) + math.atan2(self.move.y, self.move.x)) * bool(self.move.x or self.move.y)
 			self.playerVelocity.z = self.playerSpeed * self.move.z
 			self.playerPosition += self.playerVelocity * dt
 
+
+#================== MOUSE EVENTS ==================#
+
 	def on_mouse_press(self, x, y, button, modifiers):
 		if self.mode == "2D":
-			# TODO: Make this into a single call
-			for control in self.GUI:
-				if control.mouse_press(x, y):
-					return
+			if self.bottomPanel.mouse_press(x, y):
+				return
 
 			if button == mouse.LEFT:
 				worldClick = self.mouseToWorld(Vector(x,y,0))
@@ -144,11 +173,9 @@ class Window(pyglet.window.Window):
 					self.environment.selectedCreature.pos = worldClick
 					self.environment.selectedCreature.vel = Vector(0,0,0)
 				else: # do GUI stuff
-					gotButton = False
-					for control in self.GUI:
-						if control.mouse_drag(x, y):
-							gotButton = True
-					if gotButton: return
+					if self.bottomPanel.mouse_drag(x,y):
+						return
+
 			#if buttons & mouse.MIDDLE:
 			if self.environment.selectedCreature == None:
 				# Panning the view
@@ -165,10 +192,8 @@ class Window(pyglet.window.Window):
 	def on_mouse_release(self, x, y, button, modifiers):
 		if self.mode == "2D":
 			if button == mouse.LEFT:
-				for control in self.GUI:
-					if control.mouse_release(x, y):
-						return
 				self.environment.selectedCreature = None
+				self.bottomPanel.mouse_release(x, y)
 
 
 	def on_mouse_motion(self, x, y, dx, dy):
@@ -177,8 +202,7 @@ class Window(pyglet.window.Window):
 				max(0, min(180, self.playerLook[1] + dy * self.mouseSensitivity)))
 		
 		elif self.mode == "2D":
-			for control in self.GUI:
-				control.mouse_motion(x, y)
+			self.bottomPanel.mouse_motion(x, y)
 
 
 	def on_mouse_scroll(self, x, y, dx, dy):
@@ -211,32 +235,24 @@ class Window(pyglet.window.Window):
 
 
 	def on_resize(self, width, height):
+		# Update the 2D viewport
 		# TODO: fix this to take into account zoom level
 		glViewport(0, 0, width, height)
 		self.viewRight += (width * self.zoomLevel - self.viewWidth)
 		self.viewTop += (height * self.zoomLevel - self.viewHeight)
-		pass
+		# Update the bottom panel
+		self.bottomPanel.width = width
+		self.bottomPanel.layoutPanel()
+		# Update FPS display
+		self.FPS.label.y = self.height-50
 
-	def switchMode(self):
-		if self.mode == "2D":
-			self.mode = "3D"
-			self.set_exclusive_mouse(True)
-			self.move = Vector(0,0,0)
-		elif self.mode == "3D":
-			self.mode = "2D"
-			self.set_exclusive_mouse(False)
-			self.move = Vector(0,0,0)
+
+#================== KEYBOARD EVENTS ==================#
 
 	def on_key_press(self, symbol, modifiers):
-		if symbol == key.UP:
-			self.timeFactor += 1
-		elif symbol == key.DOWN:
-			self.timeFactor -= 1
-		elif symbol == key.ESCAPE:
-			self.close()
-		elif symbol == key.ENTER:
-			self.switchMode()
 		if self.mode == "3D":
+			if symbol == key.ESCAPE:
+				self.switchMode()
 			if symbol == key.W:
 				self.move.y += 1
 			elif symbol == key.A:
@@ -267,6 +283,40 @@ class Window(pyglet.window.Window):
 				self.move.z += 1
 
 
+#================== BUTTON FUNCTIONS ==================#
+
+	def playPause(self):
+		if self.paused:
+			self.paused = False
+			self.playPauseButton.sprite.image = self.pauseIcon
+		else:
+			self.paused = True
+			self.playPauseButton.sprite.image = self.playIcon
+
+	def slower(self):
+
+		self.timeFactor -= 1
+
+	def faster(self):
+		self.timeFactor += 1
+
+	def switchMode(self):
+		if self.mode == "2D":
+			self.mode = "3D"
+			self.set_exclusive_mouse(True)
+			self.move = Vector(0,0,0)
+		elif self.mode == "3D":
+			self.mode = "2D"
+			self.set_exclusive_mouse(False)
+			self.move = Vector(0,0,0)
+
+	def change(self):
+		for i in range(len(self.gridModel.vertices)):
+			if i%3 == 0:
+				self.gridModel.vertices[i] += 10
+
+#================== DRAWING ==================#
+
 	def on_draw(self):
 		self.clear()
 		if self.mode == "2D":
@@ -275,12 +325,40 @@ class Window(pyglet.window.Window):
 			self.draw3D()
 		self.drawInterface()
 
+#================== 2D DRAWING ==================#
+
 
 	def draw2D(self):
 		glEnable(GL_DEPTH_TEST)
 		self.drawEnvironment2D()
 		self.drawGrid()
 
+	def drawEnvironment2D(self):
+		# Initialize Projection matrix
+		glMatrixMode(GL_PROJECTION)
+		glLoadIdentity()
+
+		# Initialize Modelview matrix
+		glMatrixMode(GL_MODELVIEW)
+		glLoadIdentity()
+
+		# Set orthographic projection matrix
+		glOrtho(self.viewLeft, self.viewRight, self.viewBottom, self.viewTop, -1, 1)
+		self.drawCenterOfMass()
+		self.drawCreatures()
+		if self.environment.selectedCreature != None:
+			self.drawSelector(self.environment.selectedCreature)
+
+	def drawSquare2D(self, pos, size, color):
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+		glPushMatrix()
+		glColor4f(*color)
+		glTranslatef(pos.x, pos.y, pos.z)
+		pyglet.graphics.vertex_list(4, ("v3f/static", self.getSquareVertices(size))).draw(GL_QUADS)
+		glPopMatrix()
+
+
+#================== 3D DRAWING ==================#
 
 	def draw3D(self):
 		glEnable(GL_DEPTH_TEST)
@@ -306,6 +384,32 @@ class Window(pyglet.window.Window):
 		self.drawEnvironment3D()
 
 
+	def drawEnvironment3D(self):
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+		self.drawCreatures()
+		self.drawCenterOfMass()
+		if self.environment.selectedCreature != None:
+			self.drawSelector(self.environment.selectedCreature)
+
+
+	def drawSquare3D(self, pos, size, color):
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+		glPushMatrix()
+		glColor4f(*color)
+		glTranslatef(pos.x, pos.y, pos.z)
+		glRotatef(90,0,1,0)
+		faceAngle = math.degrees(math.atan2(self.playerPosition.y - pos.y, self.playerPosition.x - pos.x))
+		glRotatef(-faceAngle,1,0,0)
+		pyglet.graphics.vertex_list(4, ("v3f/static", self.getSquareVertices(size))).draw(GL_QUADS)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+		glColor4f(0,0,0,1)
+		pyglet.graphics.vertex_list(4, ("v3f/static", self.getSquareVertices(size))).draw(GL_QUADS)
+		glPopMatrix()
+
+
+#================== SHARED DRAWING ==================#
+
+
 	def drawGrid(self):
 		glColor4f(0, 0, 1, 1)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -325,69 +429,22 @@ class Window(pyglet.window.Window):
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		glDisable(GL_DEPTH_TEST)
 
-		# Actual stuff to draw
+		# Draw FPS display
 		self.FPS.draw()
+		# Draw UI controls
 		if self.mode == "2D":
-			for control in self.GUI:
-				control.draw()
+			self.bottomPanel.draw()
 
 		glEnable(GL_DEPTH_TEST)
 
 
-	def drawEnvironment2D(self):
-		# Initialize Projection matrix
-		glMatrixMode(GL_PROJECTION)
-		glLoadIdentity()
-
-		# Initialize Modelview matrix
-		glMatrixMode(GL_MODELVIEW)
-		glLoadIdentity()
-
-		# Set orthographic projection matrix
-		glOrtho(self.viewLeft, self.viewRight, self.viewBottom, self.viewTop, -1, 1)
-		self.drawCenterOfMass()
-		self.drawCreatures()
-		if self.environment.selectedCreature != None:
-			self.drawSelector(self.environment.selectedCreature)
-
-
-	def drawSquare3D(self, pos, size, color):
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-		glPushMatrix()
-		glColor4f(*color)
-		glTranslatef(pos.x, pos.y, pos.z)
-		glRotatef(90,0,1,0)
-		faceAngle = math.degrees(math.atan2(self.playerPosition.y - pos.y, self.playerPosition.x - pos.x))
-		glRotatef(-faceAngle,1,0,0)
-		self.drawSquare(size, color)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-		self.drawSquare(size, (0,0,0,1))
-		glPopMatrix()
-
-	def drawSquare2D(self, pos, size, color):
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-		glPushMatrix()
-		glColor4f(*color)
-		glTranslatef(pos.x, pos.y, pos.z)
-		self.drawSquare(size, color)
-		glPopMatrix()
-
-	def drawSquare(self, size, color):
+	def getSquareVertices(self, size):
 		vertices = ( size,  size, 0,
 					-size,  size, 0,
 					-size, -size, 0,
 					 size, -size, 0 )
-		glColor4f(*color)
-		pyglet.graphics.vertex_list(4, ("v3f/static", vertices)).draw(GL_QUADS)
+		return vertices
 
-
-	def drawEnvironment3D(self):
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-		self.drawCreatures()
-		self.drawCenterOfMass()
-		if self.environment.selectedCreature != None:
-			self.drawSelector(self.environment.selectedCreature)
-		
 
 	def drawCreatures(self):
 		for herd in self.environment.herds:
@@ -416,6 +473,9 @@ class Window(pyglet.window.Window):
 
 #create herd
 	#inside herd make creatures
+def main():
+	environment = Environment()
+	window = Window(environment)
 
-environment = Environment()
-window = Window(environment)
+if __name__ == '__main__':
+	main()

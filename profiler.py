@@ -1,12 +1,18 @@
 import cProfile
-from Environment import *
+import Vector
+import Creature
+import Herd
+import Environment
+import GUI
+import Window
 
-def main():
-	environment = Environment()
+def profileEnvironment():
+	environment = Environment.Environment()
 	environment.createHerd(100)
-	n = 0
-	while n < 100:
-		environment.update(1/1000)
-		n += 1
+	for n in range(100):
+		environment.update(1/100)
 
-cProfile.run("main()", sort="cumulative")
+def profileWindow():
+	Window.main()
+
+cProfile.run("profileWindow()", sort="cumtime")
