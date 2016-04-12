@@ -1,3 +1,4 @@
+import random
 from Vector import *
 from Creature import *
 from Herd import *
@@ -12,7 +13,6 @@ class Environment(object):
 
 	def __init__(self):
 		self.herds = []
-		self.selectedCreature = None
 		# Random environment elements
 
 	def generateRandomEnvironment(self):

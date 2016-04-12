@@ -11,10 +11,22 @@ import math
 # * Write label widget
 
 
-class GUI(object):
+class GUI:
+	# Holds GUI resources
+	pyglet.resource.path = ["resources"]
+	pyglet.resource.reindex()
 
-	def __init__(self):
-		pass
+	playIcon = pyglet.resource.image("play.png")
+	pauseIcon = pyglet.resource.image("pause.png")
+	slowerIcon = pyglet.resource.image("slower.png")
+	fasterIcon = pyglet.resource.image("faster.png")
+	threeDIcon = pyglet.resource.image("3d.png")
+	noIcon = pyglet.resource.image("none.png")
+
+	for icon in [playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon]:
+		icon.anchor_x = icon.width/2
+		icon.anchor_y = icon.height/2
+
 
 #	def mouse_press(self, x, y):
 #		pass
@@ -28,7 +40,7 @@ class GUI(object):
 #	def mouse_motion(self, x, y):
 #		pass
 
-class Button(GUI):
+class Button:
 	# Button class that is placed on a panel, reacts to mouse events, and calls a function when pressed
 
 	def __init__(self, panel, anchor, f, icon, text="",
@@ -48,7 +60,7 @@ class Button(GUI):
 
 		if self.text != "":
 			self.label = pyglet.text.Label(self.text, font_size=12, font_name="Roboto", anchor_x="center", anchor_y="center")
-		
+
 		self.panel.addButton(self)
 
 
@@ -58,16 +70,17 @@ class Button(GUI):
 
 
 
-class Label(GUI):
+class Label:
 
-	def __init__(self, panel, anchor, text=""):
+	def __init__(self, panel, anchor, width, text=""):
 		self.panel = panel
 		self.anchor = anchor
+		self.width = width
 		self.text = text
 
 
 
-class BottomPanel(GUI):
+class BottomPanel:
 	# At bottom of screen, handles multiple buttons, their drawing and position
 
 	def __init__(self, width, height, color=(0.05,0.05,0.05,0.8)):
@@ -158,11 +171,9 @@ class BottomPanel(GUI):
 		for button in self.buttons:
 			if button.clicked(x, y) and button.pressed:
 				button.pressed = True
-				return True
 			else:
 				button.pressed = False
 				button.hovered = False
-		return False
 
 	def mouse_release(self, x, y):
 		if y < self.height:
@@ -180,7 +191,7 @@ class BottomPanel(GUI):
 
 
 
-class RightPanel():
+class RightPanel:
 
 	def __init__(self, text=""):
 		pass

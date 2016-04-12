@@ -25,7 +25,7 @@ class Herd(object):
 		self.moveTowardsFactor = 1/100
 		self.moveTowardsPos = Vector(100,100,0)
 
-		self.velocityLimit = 50
+		self.velocityLimit = 25
 		self.boundaryCorrectionSpeed = 10
 
 		self.center = Vector(0,0,0)
