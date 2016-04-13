@@ -20,6 +20,7 @@ class Models:
 		vertices = tuple()
 		return vertices
 
+
 	@staticmethod
 	def grid(cellSize, gridSize):
 		vertices = []
@@ -31,10 +32,20 @@ class Models:
 				vertices += [(x)*cellSize, (y+1)*cellSize, 0]
 		return vertices
 
+
 	@staticmethod
-	def square(size):
+	def centeredSquare(size):
 		vertices = ( size,  size, 0,
 					-size,  size, 0,
 					-size, -size, 0,
 					 size, -size, 0 )
+		return vertices
+
+
+	@staticmethod
+	def square(x, y, width, height):
+		vertices = (x, y, 0,
+					x+width, y, 0,
+					x+width, y+height, 0,
+					x, y+height, 0)
 		return vertices

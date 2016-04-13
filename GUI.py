@@ -5,6 +5,7 @@ from Vector import *
 from Creature import *
 from Herd import *
 from Environment import *
+from Models import *
 import math
 
 # ================ TODO================
@@ -20,12 +21,20 @@ class GUI:
 	pauseIcon = pyglet.resource.image("pause.png")
 	slowerIcon = pyglet.resource.image("slower.png")
 	fasterIcon = pyglet.resource.image("faster.png")
+	plusIcon = pyglet.resource.image("plus.png")
 	threeDIcon = pyglet.resource.image("3d.png")
 	noIcon = pyglet.resource.image("none.png")
 
-	for icon in [playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon]:
+	for icon in [playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon,plusIcon]:
 		icon.anchor_x = icon.width/2
 		icon.anchor_y = icon.height/2
+
+	# Colors
+	buttonColor = (0,0,0,0)
+	buttonHoverColor = (1,1,1,0.1)
+	buttonPressColor = (1,1,1,0.5)
+	panelColor = (0.05,0.05,0.05,0.8)
+
 
 
 #	def mouse_press(self, x, y):
@@ -44,7 +53,7 @@ class Button:
 	# Button class that is placed on a panel, reacts to mouse events, and calls a function when pressed
 
 	def __init__(self, panel, anchor, f, icon, text="",
-			color=(0,0,0,0), hovercolor=(1,1,1,0.1), presscolor=(1,1,1,0.5)):
+			color=GUI.buttonColor, hovercolor=GUI.buttonHoverColor, presscolor=GUI.buttonPressColor):
 		self.panel = panel
 		self.anchor = anchor # left, center, or right
 		self.f = f
@@ -83,7 +92,7 @@ class Label:
 class BottomPanel:
 	# At bottom of screen, handles multiple buttons, their drawing and position
 
-	def __init__(self, width, height, color=(0.05,0.05,0.05,0.8)):
+	def __init__(self, width, height, color=GUI.panelColor):
 		self.color = color
 		self.buttons = []
 		self.leftButtons = []
@@ -135,22 +144,27 @@ class BottomPanel:
 			else:
 				button.sprite.x = button.x + button.width/2
 				button.sprite.y = button.y + button.height/2
-	
+
+		# Rebuild vertices
+		vertices = tuple()
+		vertices += Models.square(0, 0, self.width, self.height)
+		for button in self.buttons:
+			vertices += Models.square(button.x, button.y, button.width, button.height)
+		self.panelModel = pyglet.graphics.vertex_list(4 * (len(self.buttons) + 1), ("v3f", vertices), "c4f")
+
 
 	def draw(self):
-		vertices = tuple()
 		colors = tuple()
-		vertices += getSquareVertices(0, 0, self.width, self.height)
 		colors += self.color * 4
 		for button in self.buttons:
-			vertices += getSquareVertices(button.x, button.y, button.width, button.height)
 			if button.pressed:
 				colors += button.presscolor * 4
 			elif button.hovered:
 				colors += button.hovercolor * 4
 			else:
 				colors += button.color * 4
-		pyglet.graphics.vertex_list(4 * (len(self.buttons) + 1), ("v3f/static", vertices), ("c4f/static", colors)).draw(GL_QUADS)
+		self.panelModel.colors = colors
+		self.panelModel.draw(GL_QUADS)
 		# Draw labels on top of buttons
 		for button in self.buttons:
 			if button.text != "":
@@ -195,12 +209,3 @@ class RightPanel:
 
 	def __init__(self, text=""):
 		pass
-
-
-
-def getSquareVertices(x, y, width, height):
-	vertices = (x, y, 0,
-				x+width, y, 0,
-				x+width, y+height, 0,
-				x, y+height, 0)
-	return vertices

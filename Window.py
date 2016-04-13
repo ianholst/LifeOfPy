@@ -44,11 +44,10 @@ class Window(pyglet.window.Window):
 		Button(self.bottomPanel, anchor="left", icon=GUI.slowerIcon, f=self.slower)
 		Button(self.bottomPanel, anchor="left", icon=GUI.fasterIcon, f=self.faster)
 
-		Button(self.bottomPanel, anchor="center", text="Herd", icon=GUI.noIcon, f=lambda:self.environment.createHerd(20))
-		Button(self.bottomPanel, anchor="center", text="Herd", icon=GUI.noIcon, f=lambda:self.environment.createHerd(20))
+		Button(self.bottomPanel, anchor="center", text="Add creatures", icon=GUI.plusIcon, f=lambda:self.environment.createHerd(20))
 
 		Button(self.bottomPanel, anchor="right", text="3D", icon=GUI.threeDIcon, f=self.switchMode)
-		Button(self.bottomPanel, anchor="right", text="woo", icon=GUI.noIcon, f=self.change)
+		#Button(self.bottomPanel, anchor="right", text="woo", icon=GUI.noIcon, f=self.change)
 
 		# Viewport positioning in world coordinates
 		self.viewLeft = 0
@@ -101,7 +100,7 @@ class Window(pyglet.window.Window):
 
 
 		# Runtime things
-		#self.set_exclusive_mouse(False)
+		self.set_exclusive_mouse(False)
 		self.FPS = pyglet.clock.ClockDisplay(color=(0.5, 0.5, 0.5, 0.5))
 		self.FPS.label.y = self.height-50
 		self.timeFactor = 1
@@ -125,6 +124,7 @@ class Window(pyglet.window.Window):
 
 
 	def update(self, dt):
+		# Main app non-input event loop
 		if not self.paused:
 			self.environment.update(self.timeFactor*dt)
 		if self.mode == "3D":
@@ -161,6 +161,7 @@ class Window(pyglet.window.Window):
 				# Nothing was clicked, deselect
 				self.selectedCreatures = []
 				self.leftClickTool = None
+
 
 	def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
 		if self.mode == "2D":
@@ -355,7 +356,6 @@ class Window(pyglet.window.Window):
 #================== 2D DRAWING ==================#
 
 	def drawEnvironment2D(self):
-		glEnable(GL_DEPTH_TEST)
 		# Initialize Projection matrix
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
@@ -364,28 +364,31 @@ class Window(pyglet.window.Window):
 		glMatrixMode(GL_MODELVIEW)
 		glLoadIdentity()
 
-		# Set orthographic projection matrix
+		# Set orthographic projection
 		glOrtho(self.viewLeft, self.viewRight, self.viewBottom, self.viewTop, -1, 1)
-		
+
+		glDisable(GL_DEPTH_TEST)
+
 		# Actual drawing
 		self.drawGrid()
 		self.drawCenterOfMass()
+		self.drawSelector()
 		self.drawCreatures()
-		if self.selectedCreatures != None:
-			self.drawSelector()
 
 
 #================== 3D DRAWING ==================#
 
 	def drawEnvironment3D(self):
-		glEnable(GL_DEPTH_TEST)
-
+		# Initialize Projection matrix
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
-		gluPerspective(self.FOV, self.width/self.height, 1, 10000)
 
+		# Initialize Modelview matrix
 		glMatrixMode(GL_MODELVIEW)
 		glLoadIdentity()
+
+		# Set the perspective projection
+		gluPerspective(self.FOV, self.width/self.height, 1, 10000)
 
 		# XY rotation
 		glRotatef(-self.playerLook[0], 0, 0, 1)
@@ -397,13 +400,13 @@ class Window(pyglet.window.Window):
 		# Translate from player position (move the world, not the camera)
 		glTranslatef(-self.playerPosition.x, -self.playerPosition.y, -self.playerPosition.z)
 		
+		glEnable(GL_DEPTH_TEST)
+
 		# Actual drawing
 		self.drawGrid()
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		self.drawCreatures()
 		self.drawCenterOfMass()
-		if self.selectedCreatures != None:
-			self.drawSelector()
+		self.drawSelector()
 
 	def makeBillboard(self, pos):
 		# Create billboard
@@ -460,12 +463,12 @@ class Window(pyglet.window.Window):
 						self.selectionEndX, self.selectionEndY, 0,
 						self.selectionEndX, self.selectionStartY, 0)
 
+			# Selection box
 			glPushMatrix()
 			glDisable(GL_DEPTH_TEST)
 			glEnable(GL_BLEND)
 			glColor4f(1,1,1,0.3)
 
-			#glTranslatef(pos.x, pos.y, pos.z)
 			pyglet.graphics.vertex_list(4, ("v3f/static", vertices)).draw(GL_QUADS)
 			glPopMatrix()
 			glEnable(GL_DEPTH_TEST)
@@ -480,10 +483,10 @@ class Window(pyglet.window.Window):
 			self.makeBillboard(pos)
 
 		# Get square data and draw
-		pyglet.graphics.vertex_list(4, ("v3f/static", Models.square(size))).draw(GL_QUADS)
+		pyglet.graphics.vertex_list(4, ("v3f/static", Models.centeredSquare(size))).draw(GL_QUADS)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 		glColor4f(0,0,0,1)
-		pyglet.graphics.vertex_list(4, ("v3f/static", Models.square(size))).draw(GL_QUADS)
+		pyglet.graphics.vertex_list(4, ("v3f/static", Models.centeredSquare(size))).draw(GL_QUADS)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		glPopMatrix()
 
