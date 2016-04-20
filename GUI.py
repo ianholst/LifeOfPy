@@ -10,7 +10,7 @@ import math
 
 # ================ TODO================
 # * Write label widget
-
+# * Remove text from buttons
 
 class GUI:
 	# Holds GUI resources
@@ -67,9 +67,6 @@ class Button:
 		self.hovercolor = hovercolor
 		self.presscolor = presscolor
 
-		if self.text != "":
-			self.label = pyglet.text.Label(self.text, font_size=12, font_name="Roboto", anchor_x="center", anchor_y="center")
-
 		self.panel.addButton(self)
 
 
@@ -86,6 +83,7 @@ class Label:
 		self.anchor = anchor
 		self.width = width
 		self.text = text
+		#	self.label = pyglet.text.Label(self.text, font_size=12, font_name="Roboto", anchor_x="center", anchor_y="center")
 
 
 
@@ -136,17 +134,11 @@ class BottomPanel:
 			button.y = self.margin
 			button.width = self.buttonWidth
 			button.height = self.height - self.margin * 2
-			if button.text != "":
-				button.label.x = button.x + button.width/2
-				button.label.y = button.height/4
-				button.sprite.x = button.x + button.width/2
-				button.sprite.y = button.y + button.height*2/3
-			else:
-				button.sprite.x = button.x + button.width/2
-				button.sprite.y = button.y + button.height/2
+			button.sprite.x = button.x + button.width/2
+			button.sprite.y = button.y + button.height/2
 
 		# Rebuild vertices
-		vertices = tuple()
+		vertices = []
 		vertices += Models.square(0, 0, self.width, self.height)
 		for button in self.buttons:
 			vertices += Models.square(button.x, button.y, button.width, button.height)
@@ -165,10 +157,6 @@ class BottomPanel:
 				colors += button.color * 4
 		self.panelModel.colors = colors
 		self.panelModel.draw(GL_QUADS)
-		# Draw labels on top of buttons
-		for button in self.buttons:
-			if button.text != "":
-				button.label.draw()
 		# Draw icons on buttons
 		self.iconBatch.draw()
 
@@ -207,5 +195,12 @@ class BottomPanel:
 
 class RightPanel:
 
-	def __init__(self, text=""):
-		pass
+	def __init__(self, width, title=""):
+		self.width = width
+		self.title = title
+
+
+
+if __name__ == '__main__':
+	from Main import main
+	main()

@@ -10,6 +10,7 @@ class Herd(object):
 	def __init__(self):
 		# Initialize main data structure
 		self.creatures = []
+
 		# Eventually these will be specified for each creature
 
 		self.centerSeekingFactor = 1/100
@@ -40,17 +41,13 @@ class Herd(object):
 		self.averageVelocity = self.getAverageVelocity()
 		for creature in self.creatures:
 			if self.centerSeekingOn:
-				v1 = self.seekCenter(creature)
-			else: v1 = Vector(0,0,0)
+				creature.vel += self.seekCenter(creature)
 			if self.herdingSeparationOn:
-				v2 = self.herdSeparation(creature)
-			else: v2 = Vector(0,0,0)
+				creature.vel += self.herdSeparation(creature)
 			if self.velocityMatchingOn:
-				v3 = self.matchVelocity(creature)
-			else: v3 = Vector(0,0,0)
+				creature.vel += self.matchVelocity(creature)
 			#v4 = self.moveTowards(creature, self.moveTowardsPos)
 			#self.boundPosition(creature)
-			creature.vel += (v1 + v2 + v3)# + v4)
 			#creature.vel += Vector(100*random.uniform(-1,1), 100*random.uniform(-1,1))*dt
 			self.limitVelocity(creature)
 			creature.move(dt)
@@ -116,3 +113,8 @@ class Herd(object):
 		# TODO: maybe make this faster too
 		if mag(creature.vel) > self.velocityLimit:
 			creature.vel = self.velocityLimit * unit(creature.vel)
+
+
+if __name__ == '__main__':
+	from Main import main
+	main()

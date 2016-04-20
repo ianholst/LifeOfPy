@@ -7,7 +7,7 @@ from Herd import *
 from Environment import *
 from Models import *
 from GUI import *
-import math
+from math import *
 
 # ================ TODO================
 # * Change mouse cursor depending on operation
@@ -23,7 +23,8 @@ class Window(pyglet.window.Window):
 # main job is to draw the environment and allow the user to interact with it
 
 	def __init__(self, environment):
-		super(Window, self).__init__(caption="Herding Demo", vsync=False, 
+		# Create window
+		super(Window, self).__init__(caption="Life of Py", vsync=False, 
 			config=Config(depth_size=24, double_buffer=True, sample_buffers=1, samples=2),
 			resizable=True, fullscreen=False, width=1400, height=1000)
 
@@ -41,8 +42,8 @@ class Window(pyglet.window.Window):
 		self.bottomPanel = BottomPanel(width=self.width, height=100)
 		
 		self.playPauseButton = Button(self.bottomPanel, anchor="left", icon=GUI.pauseIcon, f=self.playPause)
-		Button(self.bottomPanel, anchor="left", icon=GUI.slowerIcon, f=self.slower)
-		Button(self.bottomPanel, anchor="left", icon=GUI.fasterIcon, f=self.faster)
+		self.slowerButton =    Button(self.bottomPanel, anchor="left", icon=GUI.slowerIcon, f=self.slower)
+		self.fasterButton =    Button(self.bottomPanel, anchor="left", icon=GUI.fasterIcon, f=self.faster)
 
 		Button(self.bottomPanel, anchor="center", text="Add creatures", icon=GUI.plusIcon, f=lambda:self.environment.createHerd(20))
 
@@ -72,40 +73,34 @@ class Window(pyglet.window.Window):
 		# 3D stuff (x,y are plane of movement, z is up)
 		self.playerPosition = Vector(0,0,10)
 		self.playerVelocity = Vector(0,0,0)
-		self.playerSpeed = 100
+		self.playerSpeed = 1000
 		self.playerLook = (0, 90) # (xy rotation, z rotation)
 		self.playerMove = Vector(0,0,0)
 		self.mouseSensitivity = 0.2
 		self.FOV = 70
 
+		self.loadEnvironmentModels()
+
+
 		# OpenGL setup
 		glClearColor(0, 0, 0, 0)
-		glEnable(GL_BLEND) # enable alpha channel
+		glEnable(GL_DEPTH_TEST)
+		#glEnable(GL_BLEND)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		#glBlendFunc(GL_ONE_MINUS_DST_ALPHA,GL_DST_ALPHA)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		#glEnable(GL_LINE_SMOOTH)
 		#glEnable(GL_POLYGON_SMOOTH)
 		#glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
 		#glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-		self.initShading()
+		#self.initShading()
 		#self.initFog()
-
-		# Grid Model
-		gridSize = 100
-		self.gridModel = pyglet.graphics.vertex_list(4*gridSize**2, "v3f")
-		self.gridModel.vertices = Models.grid(cellSize=10, gridSize=gridSize)
-
-		#self.creatureBatch = pyglet.graphics.Batch()
-
+		#glLineWidth(4)
 
 		# Runtime things
 		self.set_exclusive_mouse(False)
 		self.FPS = pyglet.clock.ClockDisplay(color=(0.5, 0.5, 0.5, 0.5))
 		self.FPS.label.y = self.height-50
 		self.timeFactor = 1
-		pyglet.clock.schedule(self.update)
-		pyglet.app.run()
 
 	def initFog(self):
 		glEnable(GL_FOG)
@@ -122,14 +117,17 @@ class Window(pyglet.window.Window):
 		#glEnable(GL_LIGHT0)
 		#glEnable(GL_LIGHT1)
 
+	def start(self):
+		pyglet.clock.schedule(self.update)
+		pyglet.app.run()
 
 	def update(self, dt):
 		# Main app non-input event loop
 		if not self.paused:
 			self.environment.update(self.timeFactor*dt)
 		if self.mode == "3D":
-			self.playerVelocity.x = self.playerSpeed * math.cos(math.radians(self.playerLook[0]) + math.atan2(self.playerMove.y, self.playerMove.x)) * bool(self.playerMove.x or self.playerMove.y)
-			self.playerVelocity.y = self.playerSpeed * math.sin(math.radians(self.playerLook[0]) + math.atan2(self.playerMove.y, self.playerMove.x)) * bool(self.playerMove.x or self.playerMove.y)
+			self.playerVelocity.x = self.playerSpeed * cos(radians(self.playerLook[0]) + atan2(self.playerMove.y, self.playerMove.x)) * bool(self.playerMove.x or self.playerMove.y)
+			self.playerVelocity.y = self.playerSpeed * sin(radians(self.playerLook[0]) + atan2(self.playerMove.y, self.playerMove.x)) * bool(self.playerMove.x or self.playerMove.y)
 			self.playerVelocity.z = self.playerSpeed * self.playerMove.z
 			self.playerPosition += self.playerVelocity * dt
 
@@ -200,7 +198,7 @@ class Window(pyglet.window.Window):
 				self.viewTop    -= dy * self.zoomLevel
 
 		elif self.mode == "3D":
-		 	self.playerLook = (self.playerLook[0] - dx * self.mouseSensitivity,
+			self.playerLook = (self.playerLook[0] - dx * self.mouseSensitivity,
 				max(0, min(180, self.playerLook[1] + dy * self.mouseSensitivity)))
 
 
@@ -321,26 +319,62 @@ class Window(pyglet.window.Window):
 			self.playPauseButton.sprite.image = GUI.playIcon
 
 	def slower(self):
-
 		self.timeFactor -= 1
 
 	def faster(self):
 		self.timeFactor += 1
 
 	def switchMode(self):
+		# Will eventually have to be more active
 		if self.mode == "2D":
 			self.mode = "3D"
 			self.set_exclusive_mouse(True)
 			self.playerMove = Vector(0,0,0)
+
+			for tree in self.environment.trees:
+				for c in range(2292):
+					if (c+1) % 3 == 0:
+						tree.model.vertices[c] += tree.y
+
+
 		elif self.mode == "3D":
 			self.mode = "2D"
 			self.set_exclusive_mouse(False)
 			self.playerMove = Vector(0,0,0)
 
-	def change(self):
-		for i in range(len(self.gridModel.vertices)):
-			if i%3 == 0:
-				self.gridModel.vertices[i] += 7
+			for tree in self.environment.trees:
+				for c in range(2292):
+					if (c+1) % 3 == 0:
+						tree.model.vertices[c] -= tree.y
+
+#================== MODELS ==================#
+
+	def loadEnvironmentModels(self):
+		# Separate into 2D and 3D
+		# Terrain
+		self.terrainBatch = pyglet.graphics.Batch()
+		terrainVertices, terrainColors = Models.terrain(self.environment.gridSize, self.environment.cellSize, self.environment.land)
+		self.terrainBatch.add(len(terrainVertices)//3, GL_QUADS, None, ("v3f/static", terrainVertices), ("c3f/static", terrainColors))
+		# Trees
+		self.treeBatch = pyglet.graphics.Batch()
+		for tree in self.environment.trees:
+			treeVertices, treeColors = Models.tree(tree)
+			if self.mode == "3D":
+				group = BillboardGroup(Vector(tree.x, tree.y, 0), self)
+			elif self.mode == "2D":
+				group = None
+				# Depth test hack
+				for c in range(len(treeVertices)):
+					if (c+1) % 3 == 0:
+						treeVertices[c] -= tree.y
+
+			tree.model = self.treeBatch.add(len(treeVertices)//3, GL_QUADS, group, ("v3f/static", treeVertices), ("c3f/static", treeColors))
+		# Shrubs
+
+		# Rocks
+
+	def loadCreatureModel(self):
+		pass
 
 #================== DRAWING ==================#
 
@@ -350,8 +384,7 @@ class Window(pyglet.window.Window):
 			self.drawEnvironment2D()
 		elif self.mode == "3D":
 			self.drawEnvironment3D()
-			#pyglet.graphics.vertex_list(4, ("v3f", (0,0,0, 10,0,0, 10,10,10, 0,10,0))).draw(GL_TRIANGLES)
-		self.drawInterface()
+		self.drawUI()
 
 #================== 2D DRAWING ==================#
 
@@ -365,15 +398,14 @@ class Window(pyglet.window.Window):
 		glLoadIdentity()
 
 		# Set orthographic projection
-		glOrtho(self.viewLeft, self.viewRight, self.viewBottom, self.viewTop, -1, 1)
+		glOrtho(self.viewLeft, self.viewRight, self.viewBottom, self.viewTop, -10000, 10000)
 
-		glDisable(GL_DEPTH_TEST)
-
-		# Actual drawing
-		self.drawGrid()
+		# Drawing
+		self.terrainBatch.draw()
+		self.treeBatch.draw()
 		self.drawCenterOfMass()
-		self.drawSelector()
 		self.drawCreatures()
+		self.drawSelector()
 
 
 #================== 3D DRAWING ==================#
@@ -394,38 +426,29 @@ class Window(pyglet.window.Window):
 		glRotatef(-self.playerLook[0], 0, 0, 1)
 		# Z rotation
 		glRotatef(-self.playerLook[1], 
-			math.cos(math.radians(self.playerLook[0])), 
-			math.sin(math.radians(self.playerLook[0])), 
+			cos(radians(self.playerLook[0])), 
+			sin(radians(self.playerLook[0])), 
 			0)
 		# Translate from player position (move the world, not the camera)
 		glTranslatef(-self.playerPosition.x, -self.playerPosition.y, -self.playerPosition.z)
-		
-		glEnable(GL_DEPTH_TEST)
 
-		# Actual drawing
-		self.drawGrid()
-		self.drawCreatures()
+		# Drawing
+		self.terrainBatch.draw()
+		self.treeBatch.draw()
 		self.drawCenterOfMass()
-		self.drawSelector()
+		self.drawCreatures()
 
-	def makeBillboard(self, pos):
-		# Create billboard
+
+	def rotateBillboard(self, pos):
+		# Rotate the billboard frame up 90 and towards the player
 		glRotatef(90,0,1,0)
-		faceAngle = math.degrees(math.atan2(self.playerPosition.y - pos.y, self.playerPosition.x - pos.x))
+		faceAngle = degrees(atan2(self.playerPosition.y - pos.y, self.playerPosition.x - pos.x))
 		glRotatef(-faceAngle,1,0,0)
 
 
 #================== SHARED DRAWING ==================#
 
-
-	def drawGrid(self):
-		glColor4f(0, 0, 1, 1)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-		self.gridModel.draw(GL_QUADS)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-
-
-	def drawInterface(self):
+	def drawUI(self):
 		# Initialize Projection matrix
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
@@ -435,69 +458,81 @@ class Window(pyglet.window.Window):
 		glMatrixMode(GL_MODELVIEW)
 		glLoadIdentity()
 
+		# Drawing
+		glEnable(GL_BLEND)
 		glDisable(GL_DEPTH_TEST)
-
 		# Draw FPS display
 		self.FPS.draw()
 		# Draw UI controls
 		if self.mode == "2D":
 			self.bottomPanel.draw()
-
+		glDisable(GL_BLEND)
 		glEnable(GL_DEPTH_TEST)
 
 	def drawCreatures(self):
 		for herd in self.environment.herds:
 			for creature in herd.creatures:
 				self.drawSquare(creature.pos, creature.size, (1,1,1,1))
+		for creature in self.selectedCreatures:
+			self.drawSquare(creature.pos, creature.size*1.5, color=(1,0,0,1))
 
 	def drawCenterOfMass(self):
 		for herd in self.environment.herds:
 			self.drawSquare(herd.getCenter(), 20, color=(0,1,0,1))
 
 	def drawSelector(self):
-		for creature in self.selectedCreatures:
-			self.drawSquare(creature.pos, creature.size*1.5, color=(1,0,0,1))
+		# Mouse selection box
 		if self.leftClickTool == "select":
-			vertices = (self.selectionStartX, self.selectionStartY, 0,
-						self.selectionStartX, self.selectionEndY, 0,
-						self.selectionEndX, self.selectionEndY, 0,
-						self.selectionEndX, self.selectionStartY, 0)
-
-			# Selection box
-			glPushMatrix()
 			glDisable(GL_DEPTH_TEST)
 			glEnable(GL_BLEND)
 			glColor4f(1,1,1,0.3)
-
-			pyglet.graphics.vertex_list(4, ("v3f/static", vertices)).draw(GL_QUADS)
-			glPopMatrix()
+			vertices = Models.rect(self.selectionStartX, self.selectionStartY, self.selectionEndX, self.selectionEndY)
+			pyglet.graphics.vertex_list(len(vertices)//3, ("v3f/static", vertices)).draw(GL_QUADS)
 			glEnable(GL_DEPTH_TEST)
-
+			glEnable(GL_BLEND)
 
 	def drawSquare(self, pos, size, color):
 		glPushMatrix()
-		glColor4f(*color)
-		glTranslatef(pos.x, pos.y, pos.z)
+		glTranslatef(pos.x, pos.y, -pos.y)
 
 		if self.mode == "3D":
-			self.makeBillboard(pos)
+			self.rotateBillboard(pos)
 
 		# Get square data and draw
+		glColor4f(*color)
 		pyglet.graphics.vertex_list(4, ("v3f/static", Models.centeredSquare(size))).draw(GL_QUADS)
+		
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 		glColor4f(0,0,0,1)
 		pyglet.graphics.vertex_list(4, ("v3f/static", Models.centeredSquare(size))).draw(GL_QUADS)
+		
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		glPopMatrix()
 
-##################### MAIN #####################
+
+class BillboardGroup(pyglet.graphics.Group):
+
+	def __init__(self, objectPos, window, parent=None):
+		self.objectPos = objectPos
+		self.window = window
+		super().__init__(parent)
 
 
-#create herd
-	#inside herd make creatures
-def main():
-	environment = Environment()
-	window = Window(environment)
+	def set_state(self):
+		if self.window.mode == "3D":
+			glPushMatrix()
+			glTranslatef(self.objectPos.x, self.objectPos.y, 0)
+			glRotatef(90, 1,0,0)
+			faceAngle = 90 - degrees(atan2(self.window.playerPosition.y - self.objectPos.y, self.window.playerPosition.x - self.objectPos.x))
+			glRotatef(faceAngle, 0,-1,0)
+			glTranslatef(-self.objectPos.x, -self.objectPos.y, 0)
+
+
+	def unset_state(self):
+		if self.window.mode == "3D":
+			glPopMatrix()
+
 
 if __name__ == '__main__':
+	from Main import main
 	main()
