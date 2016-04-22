@@ -14,8 +14,8 @@ from Window import *
 	#inside herd make creatures
 
 def main():
-	random.seed(90)
-	environment = Environment(50, 100)
+	random.seed()
+	environment = Environment(gridSize=64, cellSize=10, terrainResolution=128)
 	window = Window(environment)
 	window.start()
 

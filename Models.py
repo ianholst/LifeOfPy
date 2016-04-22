@@ -2,10 +2,6 @@ from math import *
 import random
 
 # ================ TODO ================
-# Tree
-# Shrub
-# Rock
-# Terrain
 # Creature
 
 
@@ -14,16 +10,19 @@ class Models:
 # For randomly generated things, all of the random attributes should be specified within Environment, 
 # and the Models class should produce the same result every time a model is requested, based on those
 # random attributes
+	circleSides = 20
+
+
 
 	@staticmethod
 	def terrain(gridSize, cellSize, land):
 		vertices = []
 		for y in range(gridSize):
 			for x in range(gridSize):
-				vertices += [x*cellSize, y*cellSize, -y*cellSize]
-				vertices += [(x+1)*cellSize, y*cellSize, -y*cellSize]
-				vertices += [(x+1)*cellSize, (y+1)*cellSize, -(y+1)*cellSize]
-				vertices += [(x)*cellSize, (y+1)*cellSize, -(y+1)*cellSize]
+				vertices += [x*cellSize, y*cellSize, 0]
+				vertices += [(x+1)*cellSize, y*cellSize, 0]
+				vertices += [(x+1)*cellSize, (y+1)*cellSize, 0]
+				vertices += [(x)*cellSize, (y+1)*cellSize, 0]
 
 		colors = []
 		for y in range(gridSize):
@@ -52,12 +51,12 @@ class Models:
 							 x1+thickness/2 * cos(radians(90-angle)), y1-thickness/2 * sin(radians(90-angle)), 0,
 							 x2+thickness/3 * cos(radians(90-angle)), y2-thickness/3 * sin(radians(90-angle)), 0,
 							 x2-thickness/3 * cos(radians(90-angle)), y2+thickness/3 * sin(radians(90-angle)), 0]
-				vertices += pythagorasTreeVertices(x2, y2, n-1, angle+spreadAngle-tiltAngle/2, length-1, thickness*2/3)
-				vertices += pythagorasTreeVertices(x2, y2, n-1, angle-spreadAngle-tiltAngle/2, length-1, thickness*2/3)
+				vertices += pythagorasTreeVertices(x2, y2, n-1, angle+spreadAngle-tiltAngle/2, length*1/2**(1/2), thickness*2/3)
+				vertices += pythagorasTreeVertices(x2, y2, n-1, angle-spreadAngle-tiltAngle/2, length*1/2**(1/2), thickness*2/3)
 				return vertices
 			else:
 				# Leaves
-				vertices += Models.blob(x1, y1, 5, length*2)
+				vertices += Models.blob(x1, y1, Tree.leafN, Tree.leafSize)
 				return vertices
 
 		def pythagorasTreeColors(n):
@@ -67,16 +66,17 @@ class Models:
 				colors += pythagorasTreeColors(n-1)*2
 				return colors
 			else:
-				colors += Tree.leafColor*4*5
+				colors += Tree.leafColor*4*Tree.leafN
 				return colors
 
-		vertices = pythagorasTreeVertices(Tree.x, Tree.y, 5, Tree.rotAngle, Tree.length, Tree.thickness)
-		colors = pythagorasTreeColors(5)
+		vertices = pythagorasTreeVertices(Tree.x, Tree.y, Tree.n, Tree.rotAngle, Tree.length, Tree.thickness)
+		colors = pythagorasTreeColors(Tree.n)
 		return vertices, colors
 
 
 	@staticmethod
 	def blob(x, y, n, r):
+		# The only randomly generated model
 		angle = 2*pi/n
 		startAngle = random.uniform(-angle,angle)
 		vertices = []
@@ -87,47 +87,92 @@ class Models:
 			y1 = y2
 			x2 = random.uniform(r/2, 3*r/2) * cos((s+1)*angle+startAngle)
 			y2 = random.uniform(r/2, 3*r/2) * sin((s+1)*angle+startAngle)
-			vertices += [x,y,-.1, x,y,-.1, x+x1,y+y1,-.1, x+x2,y+y2,-.1]
+			vertices += [x,y,-.01, x,y,-.01, x+x1,y+y1,-.01, x+x2,y+y2,-.01]
 		return vertices
 
+
 	@staticmethod
-	def shrub():
-		pass
+	def shrub(Shrub):
+		vertices = []
+		for l in range(Shrub.leaves):
+			x2 = Shrub.x
+			y2 = Shrub.y
+			for n in range(Shrub.n):
+				x1 = x2
+				y1 = y2
+				angle = 90 - Shrub.spreadAngle/2 + Shrub.spreadAngle/(Shrub.leaves-1) * l + Shrub.tiltAngle/2
+				angle -= (90-angle) / 90 * Shrub.curveAngle * n
+				t1 = Shrub.thickness - Shrub.thickness / Shrub.n * n
+				t2 = Shrub.thickness - Shrub.thickness / Shrub.n * (n+1)
+				x2 = x1 + cos(radians(angle)) * Shrub.length
+				y2 = y1 + sin(radians(angle)) * Shrub.length
+				vertices += [x1-t1 * cos(radians(90-angle)), y1+t1 * sin(radians(90-angle)), 0,
+							 x1+t1 * cos(radians(90-angle)), y1-t1 * sin(radians(90-angle)), 0,
+							 x2+t2 * cos(radians(90-angle)), y2-t2 * sin(radians(90-angle)), 0,
+							 x2-t2 * cos(radians(90-angle)), y2+t2 * sin(radians(90-angle)), 0]
+		
+		colors = Shrub.color*4*Shrub.n*Shrub.leaves
+		return vertices, colors
 
 
-#	@staticmethod
-#	def creature(Creature):
-#		
-#		def creatureVertices(elements, x, y):
-#			vertices = []
-#			for element in elements:
-#				if type(element) != list:
-#					if element["part"] == "core":
-#						vertices += Models.circle(x, y, element["radius"], 50)
-#					elif element["part"] == "limb":
-#						pass
-#				else:
-#					angle = 2*pi/len(element)
-#					for s in range(len(element)):
-#						vertices += recurse(element[s], x+, y):
-#			return vertices
-#
-#		vertices = recurse(Creature.body, Creature.pos.x, Creature.pos.y)
+	@staticmethod
+	def creature(Creature):
+		
+		def partVertices(part, x, y, angle=0):
+			vertices = []
+			currentPart = part[0]
+			# Get vertices of current part
+			if currentPart["type"] == "core":
+				vertices += Models.circle(x, y, currentPart["radius"])
+			elif currentPart["type"] == "limb":
+				x1, y1 = x, y
+				x2, y2 = x + currentPart["length"]*cos(angle), y + currentPart["length"]*sin(angle)
+				t = currentPart["thickness"]
+				vertices += [x1 - t * cos(pi/2-angle), y1 + t * sin(pi/2-angle), 0,
+							 x1 + t * cos(pi/2-angle), y1 - t * sin(pi/2-angle), 0,
+							 x2 + t * cos(pi/2-angle), y2 - t * sin(pi/2-angle), 0,
+							 x2 - t * cos(pi/2-angle), y2 + t * sin(pi/2-angle), 0]
+			# If the part has children
+			if len(part) > 1:
+				children = part[1:]
+				# Get anchor points and angles for children based on current part type and length
+				if currentPart["type"] == "core":
+					angles = [radians(children[n][0]["angle"]) + 2*pi/len(children)*n for n in range(len(children))]
+					#anchors = [(x + currentPart["radius"]*cos(angle), y + currentPart["radius"]*sin(angle)) for angle in angles]
+					anchors = [(x,y) for n in range(len(children))]
+				if currentPart["type"] == "limb":
+					angles = [pi + angle + 2*pi/(len(children)+1)*(n+1) for n in range(len(children))]
+					anchors = [(x2,y2) for angle in angles]
 
+				for (child, anchor, angle) in zip(children, anchors, angles):
+					vertices += partVertices(child, anchor[0], anchor[1], angle)
 
-	def getCourse(courseCatalog, courseNumber):
-		# Base case, course number is found at current level
-		if courseNumber in courseCatalog:
-			return courseCatalog[0] + "." + courseNumber
-		else:
-			for element in courseCatalog[1:]:
-				if getCourse(element, courseNumber) != None:
-					return courseCatalog[0] + "." + getCourse(element,courseNumber)
-			# Dead end, go up
-			return None
+			return vertices
 
+		def partColors(part):
+			colors = tuple()
+			currentPart = part[0]
+			if currentPart["type"] == "core":
+				colors += currentPart["color"] * 4 * Models.circleSides
+			elif currentPart["type"] == "limb":
+				colors += currentPart["color"] * 4
+			# If the part has children
+			if len(part) > 1:
+				children = part[1:]
+				for child in children:
+					colors += partColors(child)
 
+			return colors
 
+		# Find lowest y coordinate and shift everything up
+		vertices = partVertices(Creature.body, 0, 0)
+		bottom = min(vertices[1::3])
+		for v in range(1,len(vertices),3):
+			vertices[v] -= bottom
+
+		colors = partColors(Creature.body)
+
+		return vertices, colors
 
 
 	@staticmethod
@@ -156,7 +201,7 @@ class Models:
 		return vertices
 
 	@staticmethod
-	def circle(x, y, r, n):
+	def circle(x, y, r, n=circleSides):
 		vertices = []
 		angle = 2*pi/n
 		x2 = r
@@ -168,6 +213,12 @@ class Models:
 			y2 = r * sin((s+1)*angle)
 			vertices += [x,y,0, x,y,0, x+x1,y+y1,0, x+x2,y+y2,0]
 		return vertices
+
+
+def rotate(vector, matrix):
+	pass
+
+
 
 if __name__ == '__main__':
 	from Main import main

@@ -9,8 +9,8 @@ from Models import *
 import math
 
 # ================ TODO================
-# * Write label widget
-# * Remove text from buttons
+# Write label widget
+# Right panel
 
 class GUI:
 	# Holds GUI resources
@@ -22,10 +22,11 @@ class GUI:
 	slowerIcon = pyglet.resource.image("slower.png")
 	fasterIcon = pyglet.resource.image("faster.png")
 	plusIcon = pyglet.resource.image("plus.png")
+	settingsIcon = pyglet.resource.image("settings.png")
 	threeDIcon = pyglet.resource.image("3d.png")
 	noIcon = pyglet.resource.image("none.png")
 
-	for icon in [playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon,plusIcon]:
+	for icon in [playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon,plusIcon,settingsIcon]:
 		icon.anchor_x = icon.width/2
 		icon.anchor_y = icon.height/2
 
@@ -52,12 +53,11 @@ class GUI:
 class Button:
 	# Button class that is placed on a panel, reacts to mouse events, and calls a function when pressed
 
-	def __init__(self, panel, anchor, f, icon, text="",
+	def __init__(self, panel, anchor, f, icon,
 			color=GUI.buttonColor, hovercolor=GUI.buttonHoverColor, presscolor=GUI.buttonPressColor):
 		self.panel = panel
 		self.anchor = anchor # left, center, or right
 		self.f = f
-		self.text = text
 		self.sprite = pyglet.sprite.Sprite(icon)
 
 		self.pressed = False
@@ -143,10 +143,11 @@ class BottomPanel:
 		for button in self.buttons:
 			vertices += Models.square(button.x, button.y, button.width, button.height)
 		self.panelModel = pyglet.graphics.vertex_list(4 * (len(self.buttons) + 1), ("v3f", vertices), "c4f")
+		self.updateColors()
 
 
-	def draw(self):
-		colors = tuple()
+	def updateColors(self):
+		colors = []
 		colors += self.color * 4
 		for button in self.buttons:
 			if button.pressed:
@@ -156,6 +157,9 @@ class BottomPanel:
 			else:
 				colors += button.color * 4
 		self.panelModel.colors = colors
+
+
+	def draw(self):
 		self.panelModel.draw(GL_QUADS)
 		# Draw icons on buttons
 		self.iconBatch.draw()
@@ -166,6 +170,7 @@ class BottomPanel:
 			for button in self.buttons:
 				if button.clicked(x, y):
 					button.pressed = True
+					self.updateColors()
 					return True
 		return False
 
@@ -173,23 +178,29 @@ class BottomPanel:
 		for button in self.buttons:
 			if button.clicked(x, y) and button.pressed:
 				button.pressed = True
+				self.updateColors()
 			else:
 				button.pressed = False
 				button.hovered = False
+				self.updateColors()
 
 	def mouse_release(self, x, y):
 		if y < self.height:
 			for button in self.buttons:
 				if button.pressed:
 					button.pressed = False
+					self.updateColors()
 					button.f()
+
 
 	def mouse_motion(self, x, y):
 		for button in self.buttons:
 			if button.clicked(x, y):
 				button.hovered = True
+				self.updateColors()
 			else:
 				button.hovered = False
+				self.updateColors()
 
 
 

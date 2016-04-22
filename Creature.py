@@ -10,17 +10,24 @@ class Creature(object):
 		self.size = size
 		self.pos = pos
 		self.vel = vel
-		self.body = [{"part":"core", "color":(1,0,0), "radius":1}, 
-						[{"part":"limb", "color":(0,0,1), "length":1},
-						 {"part":"limb", "color":(0,0,1), "length":2}]]
-		self.genes = {}
+
+		self.body = [{"type":"core", "color":(1,0,0), "radius":1}, 
+						[{"type":"limb", "color":(0,0,1), "length":2, "thickness":0.3, "angle":-90},
+							[{"type":"limb", "color":(0,0,1), "length":2, "thickness":0.3}],
+							[{"type":"limb", "color":(0,0,1), "length":2, "thickness":0.3},
+								[{"type":"limb", "color":(0,0,1), "length":2, "thickness":0.3}],
+								[{"type":"limb", "color":(0,0,1), "length":2, "thickness":0.3}]],
+							[{"type":"limb", "color":(0,0,1), "length":2, "thickness":0.3}]]]
+
+		self.genes = {"centerSeekingFactor":1/100,
+					  "herdingSeparationFactor":1,
+					  "herdingDistace":10,
+					  "velocityMatchingFactor":1/100,
+					  "velocityLimit":10,
+					  "moveTowardsFactor":1}
 
 	def move(self, dt):
 		self.pos += self.vel * dt
-		# Random motion (too jittery)
-		#self.pos += Vector(10*random.uniform(-1,1), 10*random.uniform(-1,1))
-
-
 
 
 if __name__ == '__main__':

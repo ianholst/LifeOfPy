@@ -13,20 +13,6 @@ class Herd(object):
 
 		# Eventually these will be specified for each creature
 
-		self.centerSeekingFactor = 1/100
-		self.centerSeekingOn = True
-
-		self.herdingSeparation = 40
-		self.herdingSeparationFactor = 1
-		self.herdingSeparationOn = True
-
-		self.velocityMatchingFactor = 1/100
-		self.velocityMatchingOn = True
-
-		self.moveTowardsFactor = 1/100
-		self.moveTowardsPos = Vector(100,100,0)
-
-		self.velocityLimit = 25
 		self.boundaryCorrectionSpeed = 10
 
 		self.center = Vector(0,0,0)
@@ -40,12 +26,9 @@ class Herd(object):
 		self.center = self.getCenter()
 		self.averageVelocity = self.getAverageVelocity()
 		for creature in self.creatures:
-			if self.centerSeekingOn:
-				creature.vel += self.seekCenter(creature)
-			if self.herdingSeparationOn:
-				creature.vel += self.herdSeparation(creature)
-			if self.velocityMatchingOn:
-				creature.vel += self.matchVelocity(creature)
+			creature.vel += self.seekCenter(creature)
+			creature.vel += self.herdSeparation(creature)
+			creature.vel += self.matchVelocity(creature)
 			#v4 = self.moveTowards(creature, self.moveTowardsPos)
 			#self.boundPosition(creature)
 			#creature.vel += Vector(100*random.uniform(-1,1), 100*random.uniform(-1,1))*dt
@@ -54,7 +37,7 @@ class Herd(object):
 
 	def seekCenter(self, creature):
 		# Tendency towards the center of mass of the herd.
-		vc = (self.center - creature.pos) * self.centerSeekingFactor
+		vc = (self.center - creature.pos) * creature.genes["centerSeekingFactor"]
 		return vc
 
 	def herdSeparation(self, creature):
@@ -63,14 +46,14 @@ class Herd(object):
 		vs = Vector(0,0,0)
 		for otherCreature in self.creatures:
 			if otherCreature != creature:
-				if mag(creature.pos - otherCreature.pos) < self.herdingSeparation:
+				if mag(creature.pos - otherCreature.pos) < creature.genes["herdingDistace"]:
 					vs -= (otherCreature.pos - creature.pos)
-		vs *= self.herdingSeparationFactor
+		vs *= creature.genes["herdingSeparationFactor"]
 		return vs
 
 	def matchVelocity(self, creature):
 		# Creatures try to match velocity with near creatures
-		vp = (self.averageVelocity - creature.vel) * self.velocityMatchingFactor
+		vp = (self.averageVelocity - creature.vel) * creature.genes["velocityMatchingFactor"]
 		return vp
 
 	def moveTowards(self, creature, targetPos):
@@ -111,8 +94,8 @@ class Herd(object):
 
 	def limitVelocity(self, creature):
 		# TODO: maybe make this faster too
-		if mag(creature.vel) > self.velocityLimit:
-			creature.vel = self.velocityLimit * unit(creature.vel)
+		if mag(creature.vel) > creature.genes["velocityLimit"]:
+			creature.vel = creature.genes["velocityLimit"] * unit(creature.vel)
 
 
 if __name__ == '__main__':
