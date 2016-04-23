@@ -1,7 +1,7 @@
 from math import *
 import random
 
-# ================ TODO ================
+#================== TODO ==================#
 # Creature
 
 
@@ -170,8 +170,14 @@ class Models:
 		for v in range(1,len(vertices),3):
 			vertices[v] -= bottom
 
-		colors = partColors(Creature.body)
+		# Find extreme x coordinates and shift everything so x=0 is at the center
+		left = min(vertices[0::3])
+		right = max(vertices[0::3])
+		middle = (right-left)/2
+		for v in range(0,len(vertices),3):
+			vertices[v] -= middle
 
+		colors = partColors(Creature.body)
 		return vertices, colors
 
 
@@ -181,15 +187,6 @@ class Models:
 					-size,  size, 0,
 					-size, -size, 0,
 					 size, -size, 0]
-		return vertices
-
-
-	@staticmethod
-	def square(x, y, width, height):
-		vertices = [x, y, 0,
-					x+width, y, 0,
-					x+width, y+height, 0,
-					x, y+height, 0]
 		return vertices
 
 	@staticmethod

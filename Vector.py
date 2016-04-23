@@ -64,25 +64,23 @@ class Vector(object):
 	def __iter__(self):
 		return iter([self.x, self.y, self.z])
 
-	# Vector operations
-	def dot(self, other):
-		return (self.x * other.x + self.y * other.y + self.z * other.z)
 
-	def cross(self, other):
-		x = self.y * other.z - self.z * other.y
-		y = self.z * other.x - self.x * other.z
-		z = self.x * other.y - self.y * other.x
-		return Vector(x, y, z)
-
+# Vector operations, called as functions
 
 def dot(v1, v2):
-	return v1.dot(v2)
+	return (v1.x * v2.x + v1.y * v2.y + v1.z * v2.z)
 
 def cross(v1, v2):
-	return v1.cross(v2)
+		x = v1.y * v2.z - v1.z * v2.y
+		y = v1.z * v2.x - v1.x * v2.z
+		z = v1.x * v2.y - v1.y * v2.x
+		return Vector(x, y, z)
 
 def unit(v):
-	return Vector(v.x / mag(v), v.y / mag(v), v.z / mag(v))
+	if mag(v) != 0:
+		return Vector(v.x / mag(v), v.y / mag(v), v.z / mag(v))
+	else:
+		return Vector(0,0,0)
 
 def mag(v):
 	return (v.x**2 + v.y**2 + v.z**2) ** (1/2)

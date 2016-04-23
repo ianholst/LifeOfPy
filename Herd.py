@@ -10,14 +10,9 @@ class Herd(object):
 	def __init__(self):
 		# Initialize main data structure
 		self.creatures = []
-
-		# Eventually these will be specified for each creature
-
-		self.boundaryCorrectionSpeed = 10
-
+		# Herd attributes to be constantly updated
 		self.center = Vector(0,0,0)
 		self.averageVelocity = Vector(0,0,0)
-
 
 	def add(self, creature):
 		self.creatures.append(creature)
@@ -29,9 +24,7 @@ class Herd(object):
 			creature.vel += self.seekCenter(creature)
 			creature.vel += self.herdSeparation(creature)
 			creature.vel += self.matchVelocity(creature)
-			#v4 = self.moveTowards(creature, self.moveTowardsPos)
-			#self.boundPosition(creature)
-			#creature.vel += Vector(100*random.uniform(-1,1), 100*random.uniform(-1,1))*dt
+			creature.vel += Vector(10*random.uniform(-1,1), 10*random.uniform(-1,1),0)*dt
 			self.limitVelocity(creature)
 			creature.move(dt)
 
@@ -60,21 +53,6 @@ class Herd(object):
 		# Can be activated to steer creatures towards a certain place
 		vt = (targetPos - creature.pos) * self.moveTowardsFactor
 		return vt
-
-	def boundPosition(self, creature, xmin, xmax, ymin, ymax):
-		# TODO: figure out how to do this in a dynamic environment
-		v = Vector(0,0,0)
-		if creature.pos.x < xmin:
-			v.x = self.boundaryCorrectionSpeed
-		elif creature.pos.x > xmax:
-			v.x = -self.boundaryCorrectionSpeed
-		if creature.pos.y < ymin:
-			v.y = self.boundaryCorrectionSpeed
-		elif creature.pos.y > ymax:
-			v.y = -self.boundaryCorrectionSpeed
-		# If velocity has changed
-		if v.x != 0 or v.y != 0:
-			creature.vel = v
 
 	def getCenter(self):
 		# TODO: make this faster

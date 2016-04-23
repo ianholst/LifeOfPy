@@ -36,18 +36,16 @@ class Window(pyglet.window.Window):
 		self.leftClickTool = None #"select", "drag", "panel"
 		self.selectedCreatures = []
 
-
 		# GUI
-		self.bottomPanel = BottomPanel(width=self.width, height=80)
-		
+		self.bottomPanel =     BottomPanel(width=self.width, height=80)
 		self.playPauseButton = Button(self.bottomPanel, anchor="left", icon=GUI.pauseIcon, f=self.playPause)
 		self.slowerButton =    Button(self.bottomPanel, anchor="left", icon=GUI.slowerIcon, f=self.slower)
 		self.fasterButton =    Button(self.bottomPanel, anchor="left", icon=GUI.fasterIcon, f=self.faster)
+		self.createButton =    Button(self.bottomPanel, anchor="center", icon=GUI.plusIcon, f=self.createMenu)
+		self.settingsButton =  Button(self.bottomPanel, anchor="center", icon=GUI.settingsIcon, f=self.settingsMenu)
+		self.modeButton =      Button(self.bottomPanel, anchor="right", icon=GUI.threeDIcon, f=self.switchMode)
 
-		Button(self.bottomPanel, anchor="center", icon=GUI.plusIcon, f=self.addSomeCreatures)
-		Button(self.bottomPanel, anchor="center", icon=GUI.settingsIcon, f=lambda:print("settings"))
-
-		Button(self.bottomPanel, anchor="right", icon=GUI.threeDIcon, f=self.switchMode)
+		self.rightPanels = []
 
 		# Zooming parameters
 		self.zoomLevel = 0.1
@@ -70,7 +68,8 @@ class Window(pyglet.window.Window):
 		self.ymax = self.height
 
 		# 3D stuff (x,y are plane of movement, z is up)
-		self.playerPosition = Vector(0,0,5)
+		center = self.environment.gridSize * self.environment.cellSize / 2
+		self.playerPosition = Vector(center,center,5)
 		self.playerVelocity = Vector(0,0,0)
 		self.playerSpeed = 20
 		self.playerLook = (-45, 90) # (xy rotation, z rotation)
@@ -131,6 +130,7 @@ class Window(pyglet.window.Window):
 			self.playerVelocity.x = self.playerSpeed * cos(radians(self.playerLook[0]) + atan2(self.playerMove.y, self.playerMove.x)) * bool(self.playerMove.x or self.playerMove.y)
 			self.playerVelocity.y = self.playerSpeed * sin(radians(self.playerLook[0]) + atan2(self.playerMove.y, self.playerMove.x)) * bool(self.playerMove.x or self.playerMove.y)
 			self.playerVelocity.z = self.playerSpeed * self.playerMove.z
+			self.playerVelocity = self.playerSpeed * unit(self.playerVelocity)
 			self.playerPosition += self.playerVelocity * dt
 
 
@@ -140,6 +140,13 @@ class Window(pyglet.window.Window):
 		if self.mode == "2D":
 			if button == mouse.LEFT:
 				# GUI stuff
+				# Right panel clicking
+				for panel in self.rightPanels:
+					if x < panel.rightEdge - panel.width:
+						self.rightPanels = []
+					else:
+						return
+				# Bottom panel clicking
 				if self.bottomPanel.mouse_press(x, y):
 					self.leftClickTool = "panel"
 					return
@@ -150,15 +157,16 @@ class Window(pyglet.window.Window):
 						# Creature clicked
 						if (creature.pos.x - creature.size <= worldX <= creature.pos.x + creature.size and
 							creature.pos.y - creature.size <= worldY <= creature.pos.y + creature.size):
-							# Get rid of current selection
+							# If part of the selection is clicked, start to drag
 							if creature in self.selectedCreatures:
 								self.leftClickTool = "drag"
 								return
+							# If creature not in selection clicked, clear current selection and select new creature
 							else:
 								self.selectedCreatures = [creature]
 								self.leftClickTool = "drag"
 								return
-				# Nothing was clicked, deselect
+				# Nothing was clicked, deselect everything
 				self.selectedCreatures = []
 				self.leftClickTool = None
 
@@ -256,23 +264,30 @@ class Window(pyglet.window.Window):
 
 	def on_resize(self, width, height):
 		# Update the 2D viewport
-		# TODO: fix this to take into account zoom level
 		glViewport(0, 0, width, height)
-		dViewWidth = width * self.zoomLevel - self.viewWidth
-		self.viewWidth += dViewWidth
-		self.viewLeft -= dViewWidth/2
-		self.viewRight += dViewWidth/2
-
-		dViewHeight = height * self.zoomLevel - self.viewHeight
-		self.viewHeight += dViewHeight
-		self.viewBottom -= dViewHeight/2
-		self.viewTop += dViewHeight/2
+		viewWidthChange = width * self.zoomLevel - self.viewWidth
+		self.viewWidth += viewWidthChange
+		self.viewLeft -= viewWidthChange/2
+		self.viewRight += viewWidthChange/2
+		viewHeightChange = height * self.zoomLevel - self.viewHeight
+		self.viewHeight += viewHeightChange
+		self.viewBottom -= viewHeightChange/2
+		self.viewTop += viewHeightChange/2
 
 		# Update the bottom panel
 		self.bottomPanel.width = width
 		self.bottomPanel.layoutPanel()
+
+		# Update the right panel
+		for panel in self.rightPanels:
+			panel.width = width/4
+			panel.height = height
+			panel.rightEdge = width
+			panel.bottomEdge = self.bottomPanel.height
+			panel.layoutPanel()
+
 		# Update FPS display
-		self.FPS.label.y = self.height-50
+		self.FPS.label.y = self.height - 50
 
 
 #================== KEYBOARD EVENTS ==================#
@@ -346,12 +361,21 @@ class Window(pyglet.window.Window):
 		self.environment.createHerd(20)
 		self.loadCreatureModels()
 
+
+	def createMenu(self):
+		createPanel = RightPanel(width=self.width/4, height=self.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Create", widgets=[])
+		self.rightPanels.append(createPanel)
+
+	def settingsMenu(self):
+		settingsPanel = RightPanel(width=self.width/4, height=self.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Settings", widgets=[])
+		self.rightPanels.append(settingsPanel)
+
 #================== MODELS ==================#
 
 	def loadEnvironmentModels(self):
-		# Separate into 2D and 3D
+		# Must be called to load all of the 2D/3D models into memory
+		self.environmentBatch = pyglet.graphics.Batch()
 		# Terrain
-		self.terrainBatch = pyglet.graphics.Batch()
 		terrainVertices, terrainColors = Models.terrain(self.environment.terrainResolution, 
 			self.environment.cellSize/(self.environment.terrainResolution//self.environment.gridSize), self.environment.land)
 		if self.mode == "2D":
@@ -360,10 +384,9 @@ class Window(pyglet.window.Window):
 				if (c+1) % 3 == 0:
 					terrainVertices[c] -= terrainVertices[c-1]
 
-		self.terrainBatch.add(len(terrainVertices)//3, GL_QUADS, None, ("v3f/static", terrainVertices), ("c3f/static", terrainColors))
+		self.environmentBatch.add(len(terrainVertices)//3, GL_QUADS, None, ("v3f/static", terrainVertices), ("c3f/static", terrainColors))
 
 		# Trees
-		self.treeBatch = pyglet.graphics.Batch()
 		for tree in self.environment.trees:
 			treeVertices, treeColors = Models.tree(tree)
 			if self.mode == "2D":
@@ -373,10 +396,9 @@ class Window(pyglet.window.Window):
 				group = BillboardGroup(tree.x, tree.y, self)
 				treeVertices = self.rotateUp(treeVertices, tree.y)
 
-			tree.model = self.treeBatch.add(len(treeVertices)//3, GL_QUADS, group, ("v3f/static", treeVertices), ("c3f/static", treeColors))
+			tree.model = self.environmentBatch.add(len(treeVertices)//3, GL_QUADS, group, ("v3f/static", treeVertices), ("c3f/static", treeColors))
 
 		# Shrubs
-		self.shrubBatch = pyglet.graphics.Batch()
 		for shrub in self.environment.shrubs:
 			shrubVertices, shrubColors = Models.shrub(shrub)
 			if self.mode == "2D":
@@ -386,10 +408,9 @@ class Window(pyglet.window.Window):
 				group = BillboardGroup(shrub.x, shrub.y, self)
 				shrubVertices = self.rotateUp(shrubVertices, shrub.y)
 
-			shrub.model = self.shrubBatch.add(len(shrubVertices)//3, GL_QUADS, group, ("v3f/static", shrubVertices), ("c3f/static", shrubColors))
+			shrub.model = self.environmentBatch.add(len(shrubVertices)//3, GL_QUADS, group, ("v3f/static", shrubVertices), ("c3f/static", shrubColors))
 
 		# Rocks
-		self.rockBatch = pyglet.graphics.Batch()
 		for rock in self.environment.rocks:
 			rockVertices = Models.blob(rock.x, rock.y, rock.n, rock.r)
 			rockColors = rock.color*4*rock.n
@@ -400,7 +421,7 @@ class Window(pyglet.window.Window):
 				group = BillboardGroup(rock.x, rock.y, self)
 				rockVertices = self.rotateUp(rockVertices, rock.y)
 
-			rock.model = self.rockBatch.add(len(rockVertices)//3, GL_QUADS, group, ("v3f/static", rockVertices), ("c3f/static", rockColors))
+			rock.model = self.environmentBatch.add(len(rockVertices)//3, GL_QUADS, group, ("v3f/static", rockVertices), ("c3f/static", rockColors))
 
 
 	def depthHack(self, vertices, y):
@@ -439,15 +460,12 @@ class Window(pyglet.window.Window):
 			self.setup2D()
 		elif self.mode == "3D":
 			self.setup3D()
-		self.terrainBatch.draw()
-		self.treeBatch.draw()
-		self.shrubBatch.draw()
-		self.rockBatch.draw()
+		self.environmentBatch.draw()
 		#self.creatureBatch.draw()
 		self.drawCreatures()
 		self.drawSelectionBox()
-		self.setupUI()
-		self.drawUI()
+		self.setupGUI()
+		self.drawGUI()
 
 
 	def setup2D(self):
@@ -484,7 +502,8 @@ class Window(pyglet.window.Window):
 		# Set background color
 		glClearColor(0, 191/255, 1, 1)
 
-	def setupUI(self):
+
+	def setupGUI(self):
 		# Initialize Projection matrix
 		glMatrixMode(GL_PROJECTION)
 		glLoadIdentity()
@@ -503,7 +522,7 @@ class Window(pyglet.window.Window):
 		glTranslatef(-pos.x, -pos.y, 0)
 
 
-	def drawUI(self):
+	def drawGUI(self):
 		# Drawing
 		glEnable(GL_BLEND)
 		glDisable(GL_DEPTH_TEST)
@@ -512,6 +531,8 @@ class Window(pyglet.window.Window):
 		# Draw UI controls
 		if self.mode == "2D":
 			self.bottomPanel.draw()
+			for panel in self.rightPanels:
+				panel.draw()
 		glDisable(GL_BLEND)
 		glEnable(GL_DEPTH_TEST)
 
@@ -560,24 +581,21 @@ class Window(pyglet.window.Window):
 
 
 class BillboardGroup(pyglet.graphics.Group):
+# For static billboard objects
 
 	def __init__(self, x, y, window, parent=None):
-		#self.objectPos = Vector(x,y,0)
 		self.x = x
 		self.y = y
 		self.window = window
 		super().__init__(parent)
 
 	def set_state(self):
-		if self.window.mode == "3D":
-			glPushMatrix()
-			glTranslatef(self.x, self.y, 0)
-			faceAngle = 90-degrees(atan2(self.window.playerPosition.y - self.y, self.window.playerPosition.x - self.x))
-			glRotatef(faceAngle, 0,0,-1)
-			#faceAngle = 90-degrees(atan2(3 - 4, 5 - 8))
-			#glRotatef(faceAngle, 0,0,-1)
-			glTranslatef(-self.x, -self.y, 0)
-			pass
+		glPushMatrix()
+		glTranslatef(self.x, self.y, 0)
+		faceAngle = 90-degrees(atan2(self.window.playerPosition.y - self.y, self.window.playerPosition.x - self.x))
+		glRotatef(faceAngle, 0,0,-1)
+		glTranslatef(-self.x, -self.y, 0)
+		pass
 
 	def unset_state(self):
 		if self.window.mode == "3D":

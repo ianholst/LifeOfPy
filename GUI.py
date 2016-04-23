@@ -13,10 +13,11 @@ import math
 # Right panel
 
 class GUI:
-	# Holds GUI resources
+	# Utility class: Holds GUI resources
 	pyglet.resource.path = ["resources"]
 	pyglet.resource.reindex()
 
+	# Icons
 	playIcon = pyglet.resource.image("play.png")
 	pauseIcon = pyglet.resource.image("pause.png")
 	slowerIcon = pyglet.resource.image("slower.png")
@@ -31,30 +32,20 @@ class GUI:
 		icon.anchor_y = icon.height/2
 
 	# Colors
+	panelColor = (0.05,0.05,0.05,0.8)
 	buttonColor = (0,0,0,0)
 	buttonHoverColor = (1,1,1,0.1)
 	buttonPressColor = (1,1,1,0.5)
-	panelColor = (0.05,0.05,0.05,0.8)
 
+	# Fonts
+	font = "Roboto"
+	fontSize = 12
 
-
-#	def mouse_press(self, x, y):
-#		pass
-#
-#	def mouse_drag(self, x, y):
-#		pass
-#
-#	def mouse_release(self, x, y):
-#		pass
-#
-#	def mouse_motion(self, x, y):
-#		pass
 
 class Button:
 	# Button class that is placed on a panel, reacts to mouse events, and calls a function when pressed
 
-	def __init__(self, panel, anchor, f, icon,
-			color=GUI.buttonColor, hovercolor=GUI.buttonHoverColor, presscolor=GUI.buttonPressColor):
+	def __init__(self, panel, anchor, f, icon, text="", color=GUI.buttonColor, hovercolor=GUI.buttonHoverColor, presscolor=GUI.buttonPressColor):
 		self.panel = panel
 		self.anchor = anchor # left, center, or right
 		self.f = f
@@ -62,6 +53,10 @@ class Button:
 
 		self.pressed = False
 		self.hovered = False
+
+		self.text = text
+		if self.text != "":
+			self.label = pyglet.text.Label(self.text, font_size=GUI.fontSize, font_name=GUI.font, anchor_x="center", anchor_y="center")
 
 		self.color = color
 		self.hovercolor = hovercolor
@@ -83,7 +78,7 @@ class Label:
 		self.anchor = anchor
 		self.width = width
 		self.text = text
-		#	self.label = pyglet.text.Label(self.text, font_size=12, font_name="Roboto", anchor_x="center", anchor_y="center")
+		self.label = pyglet.text.Label(self.text, font_size=GUI.fontSize, font_name=GUI.font, anchor_x="center", anchor_y="center")
 
 
 
@@ -139,16 +134,20 @@ class BottomPanel:
 
 		# Rebuild vertices
 		vertices = []
-		vertices += Models.square(0, 0, self.width, self.height)
+		# Panel vertices
+		vertices += Models.rect(0, 0, self.width, self.height)
+		# Button vertices
 		for button in self.buttons:
-			vertices += Models.square(button.x, button.y, button.width, button.height)
+			vertices += Models.rect(button.x, button.y, button.x+button.width, button.y+button.height)
 		self.panelModel = pyglet.graphics.vertex_list(4 * (len(self.buttons) + 1), ("v3f", vertices), "c4f")
 		self.updateColors()
 
 
 	def updateColors(self):
 		colors = []
+		# Panel colors
 		colors += self.color * 4
+		# Button colors
 		for button in self.buttons:
 			if button.pressed:
 				colors += button.presscolor * 4
@@ -163,7 +162,6 @@ class BottomPanel:
 		self.panelModel.draw(GL_QUADS)
 		# Draw icons on buttons
 		self.iconBatch.draw()
-
 
 	def mouse_press(self, x, y):
 		if y < self.height:
@@ -192,7 +190,6 @@ class BottomPanel:
 					self.updateColors()
 					button.f()
 
-
 	def mouse_motion(self, x, y):
 		for button in self.buttons:
 			if button.clicked(x, y):
@@ -205,11 +202,50 @@ class BottomPanel:
 
 
 class RightPanel:
+# 
 
-	def __init__(self, width, title=""):
+	def __init__(self, width, height, rightEdge, bottomEdge, margin=10, title="", widgets=[], color=GUI.panelColor):
 		self.width = width
+		self.height = height
+		self.rightEdge = rightEdge
+		self.bottomEdge = bottomEdge
 		self.title = title
+		self.widgets = widgets
+		self.color = color
+		self.layoutPanel()
 
+	def addWidget(self, button):
+		pass
+
+	def layoutPanel(self):
+		# Rebuild vertices
+		vertices = []
+		# Panel vertices
+		vertices += Models.rect(self.rightEdge-self.width, self.bottomEdge, self.rightEdge, self.height)
+		# Button vertices
+		#for button in self.buttons:
+		#	vertices += Models.rect(button.x, button.y, button.x+button.width, button.y+button.height)
+		self.panelModel = pyglet.graphics.vertex_list(len(vertices)//3, ("v3f", vertices), "c4f")
+		self.updateColors()
+
+
+	def updateColors(self):
+		colors = []
+		# Panel colors
+		colors += self.color * 4
+		# Button colors
+		#for button in self.buttons:
+		#	if button.pressed:
+		#		colors += button.presscolor * 4
+		#	elif button.hovered:
+		#		colors += button.hovercolor * 4
+		#	else:
+		#		colors += button.color * 4
+		self.panelModel.colors = colors
+
+
+	def draw(self):
+		self.panelModel.draw(GL_QUADS)
 
 
 if __name__ == '__main__':

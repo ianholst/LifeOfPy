@@ -3,8 +3,8 @@ from Vector import *
 from Creature import *
 from Herd import *
 
-# ================ TODO ================
-# * More complex behavior as described in the notes
+#================== TODO ==================#
+# More complex behavior as described in the notes
 
 
 class Environment(object):
@@ -18,15 +18,17 @@ class Environment(object):
 		self.terrainResolution = terrainResolution
 
 		self.herds = []
+
 		# Random environment elements
 		self.landProbability = 0.55
 		self.treeProbability = 0.5
 		self.shrubProbability = 0.5
 		self.rockProbability = .05
+		self.generateRandomEnvironment()
+		
 		# If mutation rate is 1, properties can change up to 100% each generation
 		self.mutationRate = 0.5
 
-		self.generateRandomEnvironment()
 
 	def generateRandomEnvironment(self):
 		# Clumps of trees, shrubs, water
@@ -130,7 +132,7 @@ class Environment(object):
 	def update(self, dt):
 		for herd in self.herds:
 			herd.flock(dt)
-			#self.avoidWater(herd)
+			self.avoidWater(herd)
 
 	def avoidWater(self, herd):
 		# Avoid water
