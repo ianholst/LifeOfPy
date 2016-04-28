@@ -1,13 +1,18 @@
 from math import *
 import random
 
+#================== TODO ==================#
+# Creature
+
 
 class Models:
 # Handles the visual translation of the environment into vertices/models for drawing
 # For randomly generated things, all of the random attributes should be specified within Environment, 
 # and the Models class should produce the same result every time a model is requested, based on those
 # random attributes
-	circleSides = 30
+	circleSides = 20
+
+
 
 	@staticmethod
 	def terrain(gridSize, cellSize, land):
@@ -20,11 +25,9 @@ class Models:
 				vertices += [(x)*cellSize, (y+1)*cellSize, 0]
 
 		colors = []
-		# Water tiles
 		for y in range(gridSize):
 			for x in range(gridSize):
-				colors += [0,0,random.uniform(0.5,0.6)]*4
-		# Replace water with land
+				colors += [0,0,random.uniform(0.5,0.7)]*4
 		for cell in land:
 			row, col = cell
 			startIndex = (row*gridSize + col)*12
@@ -135,9 +138,9 @@ class Models:
 				# Get anchor points and angles for children based on current part type and length
 				if currentPart["type"] == "core":
 					angles = [radians(children[n][0]["angle"]) + 2*pi/len(children)*n for n in range(len(children))]
-					anchors = [(x + currentPart["radius"]*cos(angle), y + currentPart["radius"]*sin(angle)) for angle in angles]
-					#anchors = [(x,y) for n in range(len(children))]
-				elif currentPart["type"] == "limb":
+					#anchors = [(x + currentPart["radius"]*cos(angle), y + currentPart["radius"]*sin(angle)) for angle in angles]
+					anchors = [(x,y) for n in range(len(children))]
+				if currentPart["type"] == "limb":
 					angles = [pi + angle + 2*pi/(len(children)+1)*(n+1) for n in range(len(children))]
 					anchors = [(x2,y2) for angle in angles]
 
@@ -147,7 +150,7 @@ class Models:
 			return vertices
 
 		def partColors(part):
-			colors = []
+			colors = tuple()
 			currentPart = part[0]
 			if currentPart["type"] == "core":
 				colors += currentPart["color"] * 4 * Models.circleSides
@@ -161,10 +164,8 @@ class Models:
 
 			return colors
 
-		vertices = partVertices(Creature.body, 0, 0)
-		colors = partColors(Creature.body)
-
 		# Find lowest y coordinate and shift everything up
+		vertices = partVertices(Creature.body, 0, 0)
 		bottom = min(vertices[1::3])
 		for v in range(1,len(vertices),3):
 			vertices[v] -= bottom
@@ -176,14 +177,7 @@ class Models:
 		for v in range(0,len(vertices),3):
 			vertices[v] -= middle
 
-		# Set bounding box for selection
-		Creature.left =   min(vertices[0::3])
-		Creature.right =  max(vertices[0::3])
-		Creature.bottom = 0
-		Creature.top =    max(vertices[1::3])
-		Creature.width = Creature.right - Creature.left
-		Creature.height = Creature.top
-
+		colors = partColors(Creature.body)
 		return vertices, colors
 
 
@@ -216,6 +210,7 @@ class Models:
 			y2 = r * sin((s+1)*angle)
 			vertices += [x,y,0, x,y,0, x+x1,y+y1,0, x+x2,y+y2,0]
 		return vertices
+
 
 def rotate(vector, matrix):
 	pass

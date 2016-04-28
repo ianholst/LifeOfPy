@@ -1,5 +1,9 @@
 import random
-import numpy as np
+from Vector import *
+from Creature import *
+
+#================== TODO ==================#
+# More complex behavior as described in the notes
 
 
 class Environment:
@@ -11,9 +15,7 @@ class Environment:
 		self.cellSize = cellSize
 		self.terrainResolution = terrainResolution
 
-		self.species = []
 		self.herds = []
-		self.singleCreatures = []
 
 		# Random environment elements
 		self.landProbability = 0.55
@@ -21,7 +23,7 @@ class Environment:
 		self.shrubProbability = 0.5
 		self.rockProbability = .05
 		self.generateRandomEnvironment()
-
+		
 		# If mutation rate is 1, properties can change up to 100% each generation
 		self.mutationRate = 0.5
 
@@ -97,63 +99,33 @@ class Environment:
 				if (row, col) in water:
 					self.water.append((row, col))
 
+
+	#=============== USER ACTIONS ===============#
+
+	def createHerd(self, N):
+		herd = Herd()
+		for n in range(N):
+			herd.add(Creature(age=0, energy=100, size=3, 
+				pos=Vector(self.gridSize*self.cellSize*random.random(), self.gridSize*self.cellSize*random.random(), 0)))
+				# Position will be decided by the user
+		self.herds.append(herd)
+
+	def createSpecies(self):
+		# randomly generate genetics/physiology
+		pass
+
+	def mate(creature1, creature2):
+		newGenes = {}
+		for gene in creature1.genes:
+			newGenes[gene] = random.choice([creature1.genes[gene], creature2.genes[gene]])
+			# Mutate
+			newGenes[gene] += newGenes[gene] * self.mutationRate * random.uniform(-1,1)
+		return Creature(age=0, energy=100, size=1, pos=Vector(0,0,0), vel=Vector(0,0,0), genes=newGenes)
+
 	def update(self, dt):
-		# Main AI implementation
 		for herd in self.herds:
-			CM = np.mean(herd.positions, axis=0)
-			CMV = np.mean(herd.velocities, axis=0)
-
-
-			posDifferences =  herd.positions[:,None] - herd.positions
-			#print("posDifferences\n", posDifferences)
-			distances = np.sqrt(np.sum(posDifferences**2, axis=2))
-			#print("distances\n", distances)
-			separationInfluences = np.zeros(shape=(herd.N,2))
-			seekCenter = np.zeros(shape=(herd.N,2))
-			matchVelocity = np.zeros(shape=(herd.N,2))
-			for i in range(herd.N):
-				tooClose = distances[i] < herd.creatures[i].genes["herdingDistace"]
-				#print("tooClose\n", tooClose)
-				tooCloseIndices = np.nonzero(tooClose)
-				#print("tooCloseIndices\n", tooCloseIndices)
-				influences = posDifferences[i, tooCloseIndices]
-				#print("influences\n", influences)
-				netInfluence = np.sum(influences, axis=1)
-				#print("netInfluence\n", netInfluence)
-				separationInfluences[i] = netInfluence * herd.creatures[i].genes["herdingSeparationFactor"]
-				#print("separationInfluences\n", separationInfluences)
-				seekCenter[i] = (CM - herd.positions[i]) * herd.creatures[i].genes["cohesionFactor"]###!!!!###!!!!
-				matchVelocity[i] = (CMV - herd.velocities[i]) * herd.creatures[i].genes["velocityMatchingFactor"]###!!!!
-
-			#raise
-			#for i in range(herd.N):
-			#	# Keep separation
-			#	posDifferences = herd.positions - herd.positions[i]
-			#	distances = np.sqrt(np.sum(posDifferences**2, axis=1))
-			#	tooCloseIndices = np.nonzero(distances < herd.creatures[i].genes["herdingDistace"])
-			#	influences = posDifferences[tooCloseIndices]
-			#	netInfluence = np.sum(influences, axis=0)
-			#	separationInfluences[i] = -netInfluence * herd.creatures[i].genes["herdingSeparationFactor"]
-
-			herd.velocities += (seekCenter + matchVelocity + separationInfluences)
-			# Limit speeds
-			speeds = np.sqrt(np.sum(herd.velocities**2, axis=1))
-			excessiveVelocityIndices = np.nonzero(speeds > herd.creatures[0].genes["velocityLimit"])###!!!!
-			for i in excessiveVelocityIndices[0]:
-				herd.velocities[i] = herd.velocities[i] / speeds[i] * herd.creatures[0].genes["velocityLimit"]##!!!!!
-			# Update position
-			herd.positions += herd.velocities * dt
-
+			herd.flock(dt)
 			#self.avoidWater(herd)
-
-
-	def moveTowards(self, creature, targetPos):
-		# Can be activated to steer creatures towards a certain place
-		vt = (targetPos - creature.pos) * self.moveTowardsFactor
-		return vt
-
-
-
 
 	def avoidWater(self, herd):
 		# Avoid water
@@ -164,148 +136,102 @@ class Environment:
 				if ((creature.pos.x - waterX)**2 + (creature.pos.y - waterY)**2)**(1/2) < self.cellSize:
 					creature.vel -= (Vector(waterX, waterY,0) - creature.pos) * creature.genes["moveTowardsFactor"]
 
-	#=============== USER ACTIONS ===============#
-
-	def mate(creature1, creature2):
-		newGenes = {}
-		for gene in creature1.genes:
-			newGenes[gene] = random.choice([creature1.genes[gene], creature2.genes[gene]])
-			# Mutate
-			newGenes[gene] += newGenes[gene] * self.mutationRate * random.uniform(-1,1)
-		return Creature(age=0, energy=100, genes=newGenes, herd=random.choice(creature1.herd, creature2.herd))
-
-
-class Species:
-# Defines genetic parameters for creating creatures
-	
-	def __init__(self, name):
-		self.name = name
-		# randomly generate genetics/physiology
-		self.body = self.generateBody()
-		self.genes = self.generateGenes()
-
-
-	def generateBody(self):
-		# Some generic starting parameters
-
-		def recurse(level):
-			body = []
-			part = {}
-			part["type"] = random.choice(["core", "limb"])
-			part["color"] = [random.uniform(0,1), random.uniform(0,1), random.uniform(0,1)]
-			part["angle"] = 0
-			# Part-specific options
-			if part["type"] == "core":
-				part["radius"] = random.uniform(0,3)
-			elif part["type"] == "limb":
-				part["length"] = random.uniform(6,12)
-				part["thickness"] = random.uniform(0,1)
-			body.append(part)
-			# Stop once the specified level is reached
-			if level > 1:
-				children = random.randint(0,6)
-				for child in range(children):
-					body.append(recurse(level-1))
-			return body
-		
-		levels = random.randint(1,4)
-		body = recurse(levels)
-		return body
-
-
-	def generateGenes(self):
-		strengthFactor = 1
-		speedFactor = 2
-		intelligenceFactor = 1
-		ferocityFactor = 1
-		genes = {}
-
-		def recursiveCount(part):
-			cores, limbs, heads, mouths = 0,0,0,0
-			currentPart = part[0]
-			if currentPart["type"] == "core":
-				cores += 1
-			elif currentPart["type"] == "limb":
-				limbs += 1
-			elif currentPart["type"] == "head":
-				heads += 1
-			elif currentPart["type"] == "mouth":
-				mouths += 1
-			# If the part has children
-			if len(part) > 1:
-				children = part[1:]
-				for child in children:
-					c, l, h, m = recursiveCount(child)
-					cores += c
-					limbs += l
-					heads += h
-					mouths += m
-			return cores, limbs, heads, mouths
-
-		cores, limbs, heads, mouths = recursiveCount(self.body)
-		# More cores means stronger
-		genes["strength"] = cores * strengthFactor
-		# More limbs means faster
-		genes["speed"] = limbs * speedFactor
-		# More heads means smarter
-		genes["intelligence"] = heads * intelligenceFactor
-		# More mouths means more likely to be a predator
-		genes["ferocity"] = mouths * ferocityFactor
-
-		# Random genes not dependent on physiology
-		genes["cohesionFactor"] = 1/100
-		genes["herdingSeparationFactor"] = 1
-		genes["herdingDistace"] = 10
-		genes["velocityMatchingFactor"] = 1/1000
-		genes["velocityLimit"] = 10
-		genes["moveTowardsFactor"] = 1
-
-		return genes
-
 
 
 class Herd:
 # Manages groups of creatures
+# Like BOIDS
+# TODO: make some things class attributes
 
-	def __init__(self, species):
+	def __init__(self):
 		# Initialize main data structure
-		self.N = 0
-		self.species = species
 		self.creatures = []
-		self.positions = np.random.uniform(0, 320, size=(0, 2))
-		self.velocities = np.zeros(shape=(0,2))
-		self.loadGeneArrays()
+		# Attributes to be constantly updated
+		self.center = Vector(0,0,0)
+		self.averageVelocity = Vector(0,0,0)
 
-	def loadGeneArrays(self):
-		pass
-
-	def add(self, creature, x, y):
-		creature.id = self.N
-		self.N += 1
-		creature.herd = self
+	def add(self, creature):
 		self.creatures.append(creature)
-		self.positions = np.append(self.positions, np.array([[x, y]]), axis=0)
-		self.velocities = np.append(self.velocities, np.array([[0, 0]]), axis=0)
 
-	def remove(self, creature):
-		self.N -= 1
-		creature.herd = None
-		self.creatures.pop(creature.id)
-		self.positions = np.delete(self.positions, creature.id, axis=0)
-		self.velocities = np.delete(self.velocities, creature.id, axis=0)
+	def flock(self, dt):
+		self.center = self.getCenter()
+		self.averageVelocity = self.getAverageVelocity()
+		for creature in self.creatures:
+			creature.vel += self.seekCenter(creature)
+			creature.vel += self.herdSeparation(creature)
+			creature.vel += self.matchVelocity(creature)
+			creature.vel += Vector(10*random.uniform(-1,1), 10*random.uniform(-1,1),0)*dt
+			self.limitVelocity(creature)
+			creature.move(dt)
+
+	def seekCenter(self, creature):
+		# Tendency towards the center of mass of the herd.
+		vc = (self.center - creature.pos) * creature.genes["centerSeekingFactor"]
+		return vc
+
+	def herdSeparation(self, creature):
+		# Prevent collisions with other creatures.
+		# TODO: Main source of inefficiency, fix this
+		vs = Vector(0,0,0)
+		for otherCreature in self.creatures:
+			if otherCreature != creature:
+				if mag(creature.pos - otherCreature.pos) < creature.genes["herdingDistace"]:
+					vs -= (otherCreature.pos - creature.pos)
+		vs *= creature.genes["herdingSeparationFactor"]
+		return vs
+
+	def matchVelocity(self, creature):
+		# Creatures try to match velocity with near creatures
+		vp = (self.averageVelocity - creature.vel) * creature.genes["velocityMatchingFactor"]
+		return vp
+
+	def moveTowards(self, creature, targetPos):
+		# Can be activated to steer creatures towards a certain place
+		vt = (targetPos - creature.pos) * self.moveTowardsFactor
+		return vt
+
+	def getCenter(self):
+		# TODO: make this faster
+		center = Vector(0,0,0)
+		for creature in self.creatures:
+			center += creature.pos
+		center /= len(self.creatures)
+		return center
+
+	def getAverageVelocity(self):
+		# TODO: make this faster
+		averageVelocity = Vector(0,0,0)
+		for creature in self.creatures:
+			averageVelocity += creature.vel
+		averageVelocity /= len(self.creatures)
+		return averageVelocity
+
+	def limitVelocity(self, creature):
+		# TODO: maybe make this faster too
+		if mag(creature.vel) > creature.genes["velocityLimit"]:
+			creature.vel = creature.genes["velocityLimit"] * unit(creature.vel)
 
 
 
-class Creature:
 
-	def __init__(self, id, energy, species, herd=None):
-		self.id = id
-		self.energy = energy
-		self.state = "herding"
-		self.herd = herd
-		self.species = species
-		self.body = species.body
-		self.genes = species.genes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class Tree:

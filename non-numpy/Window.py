@@ -2,14 +2,19 @@ import pyglet
 from pyglet.gl import *
 from pyglet.window import key, mouse
 from Vector import *
+from Creature import *
 from Environment import *
 from Models import *
 from GUI import *
 from math import *
-import numpy as np
 
 #================== TODO ==================#
-# Add directions/help
+# Change mouse cursor depending on operation
+# Add Right panel and populate for the different modes (creature(s) selected / create / settings and sim stats)
+# Finish building GUI
+# 3D shading
+# Implement batched rendering for creatures
+# Add labels
 
 
 class Window(pyglet.window.Window):
@@ -31,14 +36,13 @@ class Window(pyglet.window.Window):
 		self.selectedCreatures = []
 
 		# GUI
-		batch = pyglet.graphics.Batch()
-		self.playPauseButton = Button(anchor="left", icon=GUI.pauseIcon, f=self.playPause, batch=batch)
-		self.slowerButton =    Button(anchor="left", icon=GUI.slowerIcon, f=self.slower, batch=batch)
-		self.fasterButton =    Button(anchor="left", icon=GUI.fasterIcon, f=self.faster, batch=batch)
-		self.createButton =    Button(anchor="center", icon=GUI.plusIcon, f=self.createMenu, batch=batch)
-		self.settingsButton =  Button(anchor="center", icon=GUI.settingsIcon, f=self.settingsMenu, batch=batch)
-		self.modeButton =      Button(anchor="right", icon=GUI.threeDIcon, f=self.switchMode, batch=batch)
-		self.bottomPanel =     BottomPanel(width=self.width, height=80, buttons=[self.playPauseButton, self.slowerButton, self.fasterButton, self.createButton, self.settingsButton, self.modeButton], batch=batch)
+		self.playPauseButton = Button(anchor="left", icon=GUI.pauseIcon, f=self.playPause)
+		self.slowerButton =    Button(anchor="left", icon=GUI.slowerIcon, f=self.slower)
+		self.fasterButton =    Button(anchor="left", icon=GUI.fasterIcon, f=self.faster)
+		self.createButton =    Button(anchor="center", icon=GUI.plusIcon, f=self.createMenu)
+		self.settingsButton =  Button(anchor="center", icon=GUI.settingsIcon, f=self.settingsMenu)
+		self.modeButton =      Button(anchor="right", icon=GUI.threeDIcon, f=self.switchMode)
+		self.bottomPanel =     BottomPanel(width=self.width, height=80, buttons=[self.playPauseButton, self.slowerButton, self.fasterButton, self.createButton, self.settingsButton, self.modeButton])
 
 		self.rightPanel = [] # Use a list since it might not always exist
 
@@ -134,33 +138,33 @@ class Window(pyglet.window.Window):
 	def on_mouse_press(self, x, y, button, modifiers):
 		if self.mode == "2D":
 			if button == mouse.LEFT:
+				# GUI stuff
 				# Right panel clicking
 				for panel in self.rightPanel:
-					# Close panel if elsewhere in window clicked
 					if x < panel.rightEdge - panel.width:
 						self.rightPanel = []
 					else:
-						if panel.on_mouse_press(x, y):
+						if panel.mouse_press(x, y):
 							self.leftClickTool = "panel"
 							return
 				# Bottom panel clicking
-				if self.bottomPanel.on_mouse_press(x, y):
+				if self.bottomPanel.mouse_press(x, y):
 					self.leftClickTool = "panel"
 					return
 				# Check for click on creature
 				worldX, worldY = self.mouseToWorld(x,y)
 				for herd in self.environment.herds:
-					for i in range(herd.N):
+					for creature in herd.creatures:
 						# Creature clicked
-						if (herd.positions[i, 0] + herd.creatures[i].left   <= worldX <= herd.positions[i, 0] + herd.creatures[i].right and
-							herd.positions[i, 1] + herd.creatures[i].bottom <= worldY <= herd.positions[i, 1] + herd.creatures[i].top):
+						if (creature.pos.x - creature.size <= worldX <= creature.pos.x + creature.size and
+							creature.pos.y - creature.size <= worldY <= creature.pos.y + creature.size):
 							# If part of the selection is clicked, start to drag
-							if herd.creatures[i] in self.selectedCreatures:###!!!!!!!BAD
+							if creature in self.selectedCreatures:
 								self.leftClickTool = "drag"
 								return
 							# If creature not in selection clicked, clear current selection and select new creature
 							else:
-								self.selectedCreatures = [herd.creatures[i]]
+								self.selectedCreatures = [creature]
 								self.leftClickTool = "drag"
 								return
 				# Nothing was clicked, deselect everything
@@ -181,24 +185,23 @@ class Window(pyglet.window.Window):
 					self.selectionEndX, self.selectionEndY = self.mouseToWorld(x,y)
 					self.selectedCreatures = []
 					for herd in self.environment.herds:
-						for i in range(herd.N):
-							if ((self.selectionStartX <= herd.positions[i, 0] <= self.selectionEndX or
-								 self.selectionEndX   <= herd.positions[i, 0] <= self.selectionStartX) and
-								(self.selectionStartY <= herd.positions[i, 1] <= self.selectionEndY or
-								 self.selectionEndY   <= herd.positions[i, 1] <= self.selectionStartY)):
-								self.selectedCreatures.append(herd.creatures[i])
+						for creature in herd.creatures:
+							if ((self.selectionStartX <= creature.pos.x <= self.selectionEndX or
+								self.selectionEndX <= creature.pos.x <= self.selectionStartX) and
+								(self.selectionStartY <= creature.pos.y <= self.selectionEndY or
+								self.selectionEndY <= creature.pos.y <= self.selectionStartY)):
+								self.selectedCreatures.append(creature)
 				# In the process of dragging
 				elif self.leftClickTool == "drag":
 					for creature in self.selectedCreatures:
-						creature.herd.positions[creature.id, 0] += dx * self.zoomLevel
-						creature.herd.positions[creature.id, 1] += dy * self.zoomLevel
-						creature.herd.velocities[creature.id, 0] = 0
-						creature.herd.velocities[creature.id, 1] = 0
+						creature.pos.x += dx * self.zoomLevel
+						creature.pos.y += dy * self.zoomLevel
+						creature.vel = Vector(0,0,0)
 				# GUI stuff
 				elif self.leftClickTool == "panel":
-					self.bottomPanel.on_mouse_drag(x,y)
+					self.bottomPanel.mouse_drag(x,y)
 					for panel in self.rightPanel:
-						panel.on_mouse_drag(x,y)
+						panel.mouse_drag(x,y)
 
 			elif buttons & mouse.RIGHT:
 				# Panning the view
@@ -216,15 +219,14 @@ class Window(pyglet.window.Window):
 		if self.mode == "2D":
 			if button == mouse.LEFT:
 				if self.leftClickTool == "panel":
-					self.bottomPanel.on_mouse_release(x, y)
+					self.bottomPanel.mouse_release(x, y)
 					for panel in self.rightPanel:
-						panel.on_mouse_release(x,y)
+						panel.mouse_release(x,y)
+
 				elif self.leftClickTool == "select":
 					self.leftClickTool = "drag"
 				elif self.leftClickTool == "drag":
-					# Show the selected creature menu
-					if len(self.selectedCreatures) == 1:
-						self.creatureMenu()
+					pass
 				else:
 					self.leftClickTool = None
 
@@ -233,11 +235,11 @@ class Window(pyglet.window.Window):
 		if self.mode == "3D":
 			self.playerLook = (self.playerLook[0] - dx * self.mouseSensitivity,
 				max(0, min(180, self.playerLook[1] + dy * self.mouseSensitivity)))
-
+		
 		elif self.mode == "2D":
-			self.bottomPanel.on_mouse_motion(x, y)
+			self.bottomPanel.mouse_motion(x, y)
 			for panel in self.rightPanel:
-				panel.on_mouse_motion(x,y)
+				panel.mouse_motion(x,y)
 
 
 	def on_mouse_scroll(self, x, y, dx, dy):
@@ -315,11 +317,6 @@ class Window(pyglet.window.Window):
 			elif symbol == key.LSHIFT:
 				self.playerMove.z -= 1
 
-		elif self.mode == "2D":
-			for panel in self.rightPanel:
-				panel.on_key_press(symbol, modifiers)
-
-
 	def on_key_release(self, symbol, modifiers):
 		if self.mode == "3D":
 			if symbol == key.W:
@@ -335,20 +332,8 @@ class Window(pyglet.window.Window):
 			elif symbol == key.LSHIFT:
 				self.playerMove.z += 1
 
-	def on_text(self, text):
-		for panel in self.rightPanel:
-			panel.on_text(text)
 
-	def on_text_motion(self, motion):
-		for panel in self.rightPanel:
-			panel.on_text_motion(motion)
-
-	def on_text_motion_select(self, motion):
-		for panel in self.rightPanel:
-			panel.on_text_motion_select(motion)
-
-
-#================== UI FUNCTIONS ==================#
+#================== BUTTON FUNCTIONS ==================#
 
 	def playPause(self):
 		if self.paused:
@@ -379,103 +364,19 @@ class Window(pyglet.window.Window):
 			self.playerMove = Vector(0,0,0)
 			self.loadEnvironmentModels()
 
+	def addSomeCreatures(self):
+		self.environment.createHerd(20)
+		self.loadCreatureModels()
 
 	def createMenu(self):
-		batch = pyglet.graphics.Batch()
-
-		def newSpecies():
-			batch = pyglet.graphics.Batch()
-			name = PropertyEditor("Species name", "", batch)
-			species = None
-			herd = None
-			def createNewSpecies():
-				nonlocal species
-				nonlocal herd
-				if species == None or herd == None:
-					species = Species(name.document.text)
-					self.environment.species.append(species)
-					herd = Herd(species)
-					self.environment.herds.append(herd)
-				if species != None and herd != None:
-					herd.add(Creature(id=0, energy=100, species=herd.species, herd=herd), x=(self.viewLeft + self.viewRight)/2+random.random(), y=(self.viewTop + self.viewBottom)/2+random.random())
-					self.loadCreatureModels()
-			createNewSpeciesButton = Button(icon=GUI.creatureIcon, text="Create", f=createNewSpecies, batch=batch)
-			newSpeciesPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Create Creature", widgets=[[name], [createNewSpeciesButton]], batch=batch, window=self)
-			self.rightPanel = [newSpeciesPanel]
-		newSpeciesButton = Button(icon=GUI.creatureIcon, text="New species", f=newSpecies, batch=batch)
-
-		def fromSpecies():
-			batch = pyglet.graphics.Batch()
-			def openSpecies(name):
-				for herd in self.environment.herds:
-					if herd.species.name == name:
-						herd.add(Creature(id=0, energy=100, species=herd.species, herd=herd), x=(self.viewLeft + self.viewRight)/2+random.random(), y=(self.viewTop + self.viewBottom)/2+random.random())
-						self.loadCreatureModels()
-			buttons = [[Button(icon=GUI.creatureIcon, text=species.name, f=lambda: openSpecies(species.name), batch=batch)] for species in self.environment.species]
-			fromSpeciesPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Create Creature", widgets=buttons, batch=batch, window=self)
-			self.rightPanel = [fromSpeciesPanel]
-
-		fromSpeciesButton = Button(icon=GUI.creatureIcon, text="Existing species", f=fromSpecies, batch=batch)
-		
-		#creatureButton = Button(icon=GUI.creatureIcon, text="Creature", f=addCreature, batch=batch)
-		#def addTree():
-		#	pass
-		#treeButton = Button(icon=GUI.treeIcon, text="Tree", f=addTree, batch=batch)
-		
-		createPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Create Creature", widgets=[[newSpeciesButton], [fromSpeciesButton]], batch=batch, window=self)
-		newSpeciesButton.width = 360
-		fromSpeciesButton.width = 360
-		createPanel.layoutPanel()
-		self.rightPanel = [createPanel]
+		creatureButton = Button(icon=GUI.creatureIcon, text="Creature", f=self.addSomeCreatures)
+		treeButton = Button(icon=GUI.treeIcon, text="Tree", f=self.addSomeCreatures)
+		createPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Create", widgets=[[creatureButton, treeButton]])
+		self.rightPanel.append(createPanel)
 
 	def settingsMenu(self):
-		# allow some parameters to be changed
-		batch = pyglet.graphics.Batch()
-		changeStuff = PropertyEditor("Mutation rate", str(self.environment.mutationRate), batch)
-		idk = Indicator("hi", "woooo", batch)
-		cd = PropertyEditor("Carpe diem", "sports fans", batch)
-		settingsPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Settings", widgets=[[changeStuff],[idk],[cd]], batch=batch, window=self)
-		self.rightPanel = [settingsPanel]
-
-	def creatureMenu(self):
-		batch = pyglet.graphics.Batch()
-		id = Indicator("ID:", str(self.selectedCreatures[0].id), batch)
-		species = Indicator("Species:", self.selectedCreatures[0].species.name, batch)
-		energy = PropertyEditor("Energy:", str(self.selectedCreatures[0].energy), batch)
-		state = PropertyEditor("Status:", self.selectedCreatures[0].state, batch)
-		body = PropertyEditor("Body:", repr(self.selectedCreatures[0].body), batch)
-		genes = PropertyEditor("Genes:", repr(self.selectedCreatures[0].genes), batch)
-
-		def kill():
-			self.selectedCreatures[0].herd.remove(self.selectedCreatures[0])
-			self.selectedCreatures = []
-		killButton = Button(icon=GUI.creatureIcon, text="Kill", f=kill, batch=batch)
-
-		GUI.labelWidth = 100
-		widgets = [[id], [species], [energy], [state], [body], [genes], [killButton]]
-		creaturePanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Creature", widgets=widgets, batch=batch, window=self)
-		self.rightPanel = [creaturePanel]
-		GUI.labelWidth = 150
-
-	def changeProperty(self, widget, value):
-		if widget.label.text == "Energy:":
-			if type(value) == int or type(value) == float:
-				self.selectedCreatures[0].energy = value
-		if widget.label.text == "Status:":
-			if type(value) == str:
-				# Also check for states
-				self.selectedCreatures[0].state = value
-		if widget.label.text == "Body:":
-			if type(value) == list:
-				self.selectedCreatures[0].body = value
-				self.loadCreatureModels()
-		if widget.label.text == "Genes:":
-			if type(value) == dict:
-				self.selectedCreatures[0].genes = value
-
-	def updateIndicators(self):
-		pass
-		# Similar to changeproperty, but instead query all attributes displayed on indicators and update them
+		settingsPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Settings", widgets=[])
+		self.rightPanel.append(settingsPanel)
 
 #================== MODELS ==================#
 
@@ -540,18 +441,20 @@ class Window(pyglet.window.Window):
 		# For 3D mode, rotate entities up 90 degrees off the plane
 		# Loop through y coordinates
 		for c in range(1,len(vertices),3):
-			# Copy y to z and flatten on the y axis to y value passed in
-			# Takes into account any z offset to reduce z-fighting
-			vertices[c+1], vertices[c] = vertices[c] - y, vertices[c+1] + y
+			# Copy y to z
+			vertices[c+1] = vertices[c] - y
+			# Flatten on y axis to y value passed in
+			vertices[c] = y
 		return vertices
 
 
 	def loadCreatureModels(self):
+		self.creatureBatch = pyglet.graphics.Batch()
 		for herd in self.environment.herds:
-			for i in range(herd.N):
-				creatureVertices, creatureColors = Models.creature(herd.creatures[i])
-				herd.creatures[i].model = pyglet.graphics.vertex_list(len(creatureVertices)//3, 
-					("v3f/dynamic", creatureVertices), ("c3f/static", creatureColors))
+			for creature in herd.creatures:
+				creatureVertices, creatureColors = Models.creature(creature)
+				creature.model = self.creatureBatch.add(len(creatureVertices)//3, 
+					GL_QUADS, None, ("v3f/dynamic", creatureVertices), ("c3f/static", creatureColors))
 
 
 #================== DRAWING ==================#
@@ -563,6 +466,7 @@ class Window(pyglet.window.Window):
 		elif self.mode == "3D":
 			self.setup3D()
 		self.environmentBatch.draw()
+		#self.creatureBatch.draw()
 		self.drawCreatures()
 		self.drawSelectionBox()
 		self.setupGUI()
@@ -601,8 +505,7 @@ class Window(pyglet.window.Window):
 		# Translate from player position (move the world, not the camera)
 		glTranslatef(-self.playerPosition.x, -self.playerPosition.y, -self.playerPosition.z)
 		# Set background color
-		#glClearColor(0, 191/255, 1, 1)
-		glClearColor(0, 0, 0, 0)
+		glClearColor(0, 191/255, 1, 1)
 
 
 	def setupGUI(self):
@@ -632,7 +535,6 @@ class Window(pyglet.window.Window):
 
 	def drawSelectionBox(self):
 		# Draw mouse selection box
-		# In world frame
 		if self.leftClickTool == "select":
 			glEnable(GL_BLEND)
 			glDisable(GL_DEPTH_TEST)
@@ -645,44 +547,40 @@ class Window(pyglet.window.Window):
 
 	def drawCreatures(self):
 		for herd in self.environment.herds:
-			# Draw the center of mass of the herd
-			#cmx = np.mean(herd.positions, axis=0)[0]
-			#cmy = np.mean(herd.positions, axis=0)[1]
-			#cmsize = 3
-			#glColor4f(1,0,0,1)
-			#pyglet.graphics.vertex_list(4, ("v3f/static", Models.rect(cmx-cmsize, cmy-cmsize, cmx+cmsize, cmy+cmsize))).draw(GL_QUADS)
-
-			# Draw individual creatures
-			for i in range(herd.N):
+			# Draw the center of mass
+			self.drawSquare(herd.getCenter(), 3, color=(1,0,0,1))
+			for creature in herd.creatures:
 				glPushMatrix()
 				glColor4f(1,1,1,1)
 				if self.mode == "3D":
-					self.rotateBillboard(herd.positions[i, 0], herd.positions[i, 1])
-					glTranslatef(herd.positions[i, 0], herd.positions[i, 1], 0)
+					self.rotateBillboard(creature.pos)
+					glTranslatef(creature.pos.x, creature.pos.y, 0)
 				else:
-					glTranslatef(herd.positions[i, 0], herd.positions[i, 1], -herd.positions[i, 1])
-				herd.creatures[i].model.draw(GL_QUADS)
+					glTranslatef(creature.pos.x, creature.pos.y, -creature.pos.y)
+				creature.model.draw(GL_QUADS)
 				glPopMatrix()
-
-		# Draw selection boxes around creatures
 		for creature in self.selectedCreatures:
-			glPushMatrix()
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-			glTranslatef(creature.herd.positions[creature.id, 0], creature.herd.positions[creature.id, 1], 0)
-			glColor4f(1,0,0,1)
-			pyglet.graphics.vertex_list(4, ("v3f/static", Models.rect(creature.left, creature.bottom, creature.right, creature.top))).draw(GL_QUADS)
+			self.drawSquare(creature.pos, creature.size, color=(1,0,0,1))
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-			glPopMatrix()
 
 
-	def rotateBillboard(self, x, y):
+	def rotateBillboard(self, pos):
 		# Rotate the billboard frame up 90 and towards the player
-		glTranslatef(x, y, 0)
+		glTranslatef(pos.x, pos.y, 0)
 		glRotatef(90,1,0,0)
-		faceAngle = 90-degrees(atan2(self.playerPosition.y - y, self.playerPosition.x - x))
+		faceAngle = 90-degrees(atan2(self.playerPosition.y - pos.y, self.playerPosition.x - pos.x))
 		glRotatef(faceAngle,0,-1,0)
-		glTranslatef(-x, -y, 0)
+		glTranslatef(-pos.x, -pos.y, 0)
 
+
+	def drawSquare(self, pos, size, color):
+		glPushMatrix()
+		glTranslatef(pos.x, pos.y, -pos.y)
+		# Get square data and draw
+		glColor4f(*color)
+		pyglet.graphics.vertex_list(4, ("v3f/static", Models.centeredSquare(size))).draw(GL_QUADS)
+		glPopMatrix()
 
 
 class BillboardGroup(pyglet.graphics.Group):

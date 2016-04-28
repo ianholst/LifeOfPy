@@ -5,7 +5,7 @@ def profileEnvironment():
 	import Creature
 	import Environment
 	environment = Environment.Environment(gridSize=32, cellSize=10, terrainResolution=128)
-	environment.addHerd(50)
+	environment.createHerd(50)
 	for n in range(1000):
 		environment.update(1/100)
 
