@@ -13,8 +13,8 @@ import numpy as np
 
 def main():
 	#random.seed(0)
+	#environment = Environment(gridSize=32, cellSize=10, terrainResolution=128)
 	environment = Environment(gridSize=32, cellSize=10, terrainResolution=128)
-	#environment = Environment(gridSize=64, cellSize=10, terrainResolution=128)
 	window = Window(environment)
 	window.start()
 

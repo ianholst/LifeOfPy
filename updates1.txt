@@ -1,9 +1,0 @@
-A lot of the work done this week was on making the backend more robust and implementing the following features, although there are a few new visuals:
-- The environment is now randomly generated using cellular automata. The placement of trees, shrubs, water, and land are all controlled by a custom set of rules in a Game of Life-like algorithm.
-- Environmental elements, such as trees, shrubs, and rocks are drawn as recursive fractals. The terrain tiles are also displayed as well. All size and color aspects are randomized.
-- Created a genetic and physiological data structure for the creatures, as well as a way to recursively draw their bodies (this is mostly complete)
-- Greatly sped up drawing with the use of pyglet batch objects
-- 2D and 3D mode can now use the same drawing code. 3D mode only needs an extra argument passed in for some objects to make them face the player (billboard effect)
-- Figured out a way to do depth testing for proper drawing order in 2D mode. The z coordinates of object models are updated as the -y coordinate, forcing proper draw order without needing to sort anything.
-- Began work on creature-environment interactions with numpy arrays
-- Behavior of genetic data when mating two creatures is written and takes into account the mutation rate for random effects

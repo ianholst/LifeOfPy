@@ -129,6 +129,8 @@ class Models:
 							 x1 + t * cos(pi/2-angle), y1 - t * sin(pi/2-angle), 0,
 							 x2 + t * cos(pi/2-angle), y2 - t * sin(pi/2-angle), 0,
 							 x2 - t * cos(pi/2-angle), y2 + t * sin(pi/2-angle), 0]
+			elif currentPart["type"] == "mouth":
+				vertices += Models.mouth(x, y, currentPart["radius"], angle)
 			# If the part has children
 			if len(part) > 1:
 				children = part[1:]
@@ -136,10 +138,12 @@ class Models:
 				if currentPart["type"] == "core":
 					angles = [radians(children[n][0]["angle"]) + 2*pi/len(children)*n for n in range(len(children))]
 					anchors = [(x + currentPart["radius"]*cos(angle), y + currentPart["radius"]*sin(angle)) for angle in angles]
-					#anchors = [(x,y) for n in range(len(children))]
 				elif currentPart["type"] == "limb":
 					angles = [pi + angle + 2*pi/(len(children)+1)*(n+1) for n in range(len(children))]
 					anchors = [(x2,y2) for angle in angles]
+				elif currentPart["type"] == "mouth":
+					angles = [radians(children[n][0]["angle"]) + 2*pi/len(children)*n for n in range(len(children))]
+					anchors = [(x + currentPart["radius"]*cos(angle), y + currentPart["radius"]*sin(angle)) for angle in angles]
 
 				for (child, anchor, angle) in zip(children, anchors, angles):
 					vertices += partVertices(child, anchor[0], anchor[1], angle)
@@ -153,6 +157,8 @@ class Models:
 				colors += currentPart["color"] * 4 * Models.circleSides
 			elif currentPart["type"] == "limb":
 				colors += currentPart["color"] * 4
+			if currentPart["type"] == "mouth":
+				colors += currentPart["color"] * 4 * Models.circleSides
 			# If the part has children
 			if len(part) > 1:
 				children = part[1:]
@@ -217,9 +223,20 @@ class Models:
 			vertices += [x,y,0, x,y,0, x+x1,y+y1,0, x+x2,y+y2,0]
 		return vertices
 
-def rotate(vector, matrix):
-	pass
-
+	@staticmethod
+	def mouth(x, y, r, angle, n=circleSides):
+		vertices = []
+		openAngle = pi/6
+		a = (2*pi - openAngle)/n
+		x2 = r * cos(openAngle/2 + angle)
+		y2 = r * sin(openAngle/2 + angle)
+		for s in range(n):
+			x1 = x2
+			y1 = y2
+			x2 = r * cos((s+1)*a + angle)
+			y2 = r * sin((s+1)*a + angle)
+			vertices += [x,y,0, x,y,0, x+x1,y+y1,0, x+x2,y+y2,0]
+		return vertices
 
 
 if __name__ == '__main__':

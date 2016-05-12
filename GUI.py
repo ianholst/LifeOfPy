@@ -18,10 +18,13 @@ class GUI:
 	settingsIcon = pyglet.resource.image("settings.png")
 	threeDIcon = pyglet.resource.image("3d.png")
 	noIcon = pyglet.resource.image("none.png")
+	heartIcon = pyglet.resource.image("heart.png")
 	creatureIcon = pyglet.resource.image("creature.png")
 	treeIcon = pyglet.resource.image("tree.png")
+	copyIcon = pyglet.resource.image("copy.png")
+	killIcon = pyglet.resource.image("kill.png")
 
-	for icon in [playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon,plusIcon,settingsIcon,creatureIcon,treeIcon]:
+	for icon in [killIcon,copyIcon,heartIcon,playIcon,pauseIcon,slowerIcon,fasterIcon,noIcon,threeDIcon,plusIcon,settingsIcon,creatureIcon,treeIcon]:
 		icon.anchor_x = icon.width/2
 		icon.anchor_y = icon.height/2
 
@@ -450,6 +453,8 @@ class RightPanel:
 				self.window.changeProperty(self.focus, eval(self.focus.document.text))
 			except NameError:
 				self.window.changeProperty(self.focus, self.focus.document.text)
+			except SyntaxError:
+				self.focus.document.text = "INVALID"
 			# Deselect
 			self.focusOn(None)
 
