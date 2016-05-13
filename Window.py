@@ -6,7 +6,7 @@ from Environment import *
 from Models import *
 from GUI import *
 from math import *
-import numpy as np
+
 
 #================== TODO ==================#
 # Add directions/help
@@ -17,7 +17,7 @@ class Window(pyglet.window.Window):
 
 	def __init__(self, environment):
 		# Create window
-		super(Window, self).__init__(caption="Life of Py", vsync=False, 
+		super(Window, self).__init__(caption="Life of Py", vsync=False,
 			config=Config(depth_size=24, double_buffer=True, sample_buffers=1, samples=2),
 			resizable=True, fullscreen=False, width=1400, height=1000)
 
@@ -433,12 +433,12 @@ class Window(pyglet.window.Window):
 			self.rightPanel = [fromSpeciesPanel]
 
 		fromSpeciesButton = Button(icon=GUI.creatureIcon, text="Existing species", f=fromSpecies, batch=batch)
-		
+
 		#creatureButton = Button(icon=GUI.creatureIcon, text="Creature", f=addCreature, batch=batch)
 		#def addTree():
 		#	pass
 		#treeButton = Button(icon=GUI.treeIcon, text="Tree", f=addTree, batch=batch)
-		
+
 		createPanel = RightPanel(width=GUI.rightPanelWidth, height=self.height-self.bottomPanel.height, rightEdge=self.width, bottomEdge=self.bottomPanel.height, title="Create Creature", widgets=[[newSpeciesButton], [fromSpeciesButton]], batch=batch, window=self)
 		newSpeciesButton.width = 360
 		fromSpeciesButton.width = 360
@@ -519,7 +519,7 @@ class Window(pyglet.window.Window):
 		self.environmentBatch = pyglet.graphics.Batch()
 
 		# Terrain
-		terrainVertices, terrainColors = Models.terrain(self.environment.terrainResolution, 
+		terrainVertices, terrainColors = Models.terrain(self.environment.terrainResolution,
 			self.environment.cellSize/(self.environment.terrainResolution//self.environment.gridSize), self.environment.land)
 		if self.mode == "2D":
 			# Depth test hack for terrain
@@ -584,7 +584,7 @@ class Window(pyglet.window.Window):
 	def loadCreatureModels(self):
 		for creature in self.environment.creatures:
 				creatureVertices, creatureColors = Models.creature(creature)
-				creature.model = pyglet.graphics.vertex_list(len(creatureVertices)//3, 
+				creature.model = pyglet.graphics.vertex_list(len(creatureVertices)//3,
 					("v3f/dynamic", creatureVertices), ("c3f/static", creatureColors))
 
 
@@ -628,9 +628,9 @@ class Window(pyglet.window.Window):
 		# XY rotation
 		glRotatef(-self.playerLook[0], 0, 0, 1)
 		# Z rotation
-		glRotatef(-self.playerLook[1], 
-			cos(radians(self.playerLook[0])), 
-			sin(radians(self.playerLook[0])), 
+		glRotatef(-self.playerLook[1],
+			cos(radians(self.playerLook[0])),
+			sin(radians(self.playerLook[0])),
 			0)
 		# Translate from player position (move the world, not the camera)
 		glTranslatef(-self.playerPosition.x, -self.playerPosition.y, -self.playerPosition.z)
