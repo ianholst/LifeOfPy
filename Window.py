@@ -93,7 +93,8 @@ class Window(pyglet.window.Window):
 
 		# Runtime things
 		self.set_exclusive_mouse(False)
-		self.FPS = pyglet.clock.ClockDisplay(color=(0.5, 0.5, 0.5, 0.5))
+		self.FPS = pyglet.window.FPSDisplay(self)
+		self.FPS.label.color = (255, 255, 255, 125)
 		self.FPS.label.y = self.height-50
 		self.timeFactor = 1
 		self.minTimeFactor = 1/4
